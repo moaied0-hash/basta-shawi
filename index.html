@@ -1,1 +1,1435 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#c52a1a" />
+<title>بسطة شوي - نظام الطلبات</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+const firebaseConfig = {
+    apiKey: "AIzaSyCa22I08mvNFWG37agpoxxvc1kwz_YeuiY",
+    authDomain: "basta-shawi.firebaseapp.com",
+    databaseURL: "https://basta-shawi-default-rtdb.firebaseio.com",
+    projectId: "basta-shawi",
+    storageBucket: "basta-shawi.firebasestorage.app",
+    messagingSenderId: "673586673644",
+    appId: "1:673586673644:web:f3ba825a03708606d472c9"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+let deviceId = localStorage.getItem('basta_device_id');
+if (!deviceId) {
+    deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+    localStorage.setItem('basta_device_id', deviceId);
+}
+window.FB = { db, ref, onValue, set, update, deviceId, ready: true };
+console.log('✅ Firebase initialized. Device ID:', deviceId);
+window.dispatchEvent(new CustomEvent('firebase-ready'));
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#f5f0eb;min-height:100vh;padding:1.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:1rem}
+#connectionStatus{position:fixed;top:12px;right:12px;z-index:9999;background:#1f7b4d;color:white;padding:6px 14px;border-radius:40px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+#connectionStatus.offline{background:#c52a1a}
+#notificationsWrap{position:fixed;top:60px;right:12px;z-index:9998;display:flex;flex-direction:column;gap:8px;max-width:320px}
+.notif-toast{background:#2c2118;color:white;border-right:4px solid #e6b325;padding:12px 16px;border-radius:10px;font-size:.88rem;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:flex-start;gap:10px;animation:notifSlide .3s ease}
+.notif-toast i{color:#e6b325;font-size:1.2rem;margin-top:2px}
+.notif-toast.success{border-right-color:#3fae55}.notif-toast.success i{color:#3fae55}
+.notif-toast.error{border-right-color:#c52a1a}.notif-toast.error i{color:#c52a1a}
+@keyframes notifSlide{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+.page-nav{display:flex;gap:12px;max-width:1200px;width:100%}
+.nav-btn{flex:1;justify-content:center;padding:.8rem;font-size:1rem;background:white}
+.nav-btn.active{background:#3a2c1c;border-color:#3a2c1c;color:white}
+.nav-btn.active i{color:#e6b325}
+.tables-page,.order-card{max-width:1200px;width:100%;background:white;border-radius:24px;box-shadow:0 20px 50px -10px rgba(0,0,0,.15);padding:1.8rem 1.5rem;border:1px solid #e6ddd4}
+.tables-page-header{text-align:center;margin-bottom:1.5rem}
+.tables-page-header h1{font-size:1.6rem;color:#3a2c1c;display:flex;align-items:center;justify-content:center;gap:10px}
+.tables-page-header h1 i{color:#c52a1a}
+.tables-page-header p{color:#8a7a6a;margin-top:6px;font-size:.92rem}
+.tables-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+.table-card{border-radius:18px;padding:1.3rem .8rem;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:transform .15s,box-shadow .15s;border:2px solid transparent}
+.table-card:hover{transform:translateY(-3px)}
+.table-card.available{background:#f5ede6;border-color:#e3d7cc}
+.table-card.occupied{background:#fcf0ea;border-color:#c52a1a;box-shadow:0 8px 20px -6px rgba(197,42,26,.35)}
+.table-card-icon{font-size:2rem;color:#3a2c1c}
+.table-card.occupied .table-card-icon{color:#c52a1a}
+.table-card-num{font-weight:800;font-size:1.2rem;color:#3a2c1c}
+.table-card-status{font-size:.85rem;color:#8a7a6a;text-align:center}
+.table-card.occupied .table-card-status{color:#a82214;font-weight:600}
+.table-card-timer{font-size:1.05rem;font-weight:900;color:#3a2c1c;background:#f0e6da;padding:4px 14px;border-radius:40px;display:inline-flex;align-items:center;gap:6px;margin-top:4px}
+.table-card-timer i{color:#b45f3b;font-size:.95rem}
+.order-header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;border-bottom:3px dashed #d4c5b8;padding-bottom:1rem;margin-bottom:1.5rem}
+.restaurant-name{display:flex;align-items:center;gap:12px}
+.restaurant-name .logo-circle{background:#c52a1a;color:white;width:55px;height:55px;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:24px;font-weight:bold}
+.restaurant-name h1{font-size:1.6rem;font-weight:700;color:#3a2c1c}
+.restaurant-name small{display:block;font-size:.75rem;color:#8a7a6a}
+.order-meta{background:#faf6f0;padding:.5rem 1.2rem;border-radius:60px;font-size:.88rem;color:#3a2c1c;border:1px solid #d4c5b8;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.order-meta i{color:#c52a1a}
+.order-meta-item{display:inline-flex;align-items:center;gap:6px}
+.order-meta-orderno #orderMetaNo{font-size:1.4em;padding:2px 14px;background:#c52a1a;color:#fff;border-radius:40px;font-weight:700}
+.toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:1rem}
+.badge-count{background:#3a2c1c;color:white;padding:.4rem 1.4rem;border-radius:60px;font-size:1.05rem;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.badge-count i{color:#e6b325}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:none;padding:.6rem 1.4rem;border-radius:60px;font-weight:600;font-size:.92rem;display:inline-flex;align-items:center;gap:8px;cursor:pointer;transition:all .15s;border:1px solid #d4c5b8;background:#fcf8f5;color:#3a2c1c}
+.btn i{font-size:1.05rem}
+.btn-primary{background:#c52a1a;border-color:#c52a1a;color:white}
+.btn-primary i{color:#f5e6d0}
+.btn-primary:hover{background:#a82214}
+.btn-success{background:#1f7b4d;border-color:#1f7b4d;color:white}
+.btn-success:hover{background:#14633b}
+.btn-outline:hover{background:#ede0d6}
+.btn-add{background:#e6b325;border-color:#e6b325;color:#3a2c1c}
+.btn-add:hover{background:#d4a020}
+.btn-danger{background:#dc3545;border-color:#dc3545;color:white}
+.btn-danger:hover{background:#b02a37}
+.btn-warning{background:#ffc107;border-color:#ffc107;color:#3a2c1c}
+.btn-warning:hover{background:#e0a800}
+.btn-cancel{background:#ede0d6;border-color:#d4c5b8}
+.btn-cancel:hover{background:#ddd0c4}
+.held-count-badge{background:#c52a1a;color:white;font-size:.75rem;font-weight:700;padding:1px 8px;border-radius:40px;margin-right:4px}
+.menu-grid-wrapper{margin-bottom:1.5rem}
+.menu-grid-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:.6rem}
+.menu-grid-title{font-size:1rem;font-weight:700;color:#3a2c1c;display:flex;align-items:center;gap:8px}
+.menu-grid-title i{color:#c52a1a}
+.menu-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.menu-card{position:relative;background:#fff;border:1px solid #e3d7cc;border-radius:10px;padding:.9rem .5rem;text-align:center;cursor:pointer;transition:transform .12s,box-shadow .12s,background .15s;user-select:none}
+.menu-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.08);transform:translateY(-2px)}
+.menu-card.active{background:#d3ab73;border-color:#c39a5f}
+.menu-card .mc-name{display:block;font-weight:700;font-size:1.05rem;color:#2a2a2a;margin-bottom:.5rem}
+.menu-card .mc-price{display:block;font-size:1rem;font-weight:600;color:#1a6faf}
+.menu-card.active .mc-price{color:#4a3a1a}
+.menu-card .mc-badge{position:absolute;top:-14px;left:-14px;background:#c52a1a;color:#fff;font-size:1.5rem;font-weight:800;min-width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 8px;box-shadow:0 3px 8px rgba(0,0,0,.35);border:3px solid #fff;z-index:2}
+.mc-options-input{width:100%;margin-top:.5rem;padding:4px 8px;font-size:.75rem;border:1px solid #d4c5b8;border-radius:6px;text-align:center;background:#fffdfa;color:#4a3a1a}
+.mc-options-input:focus{outline:none;border-color:#c52a1a}
+.mc-qty-control{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:.6rem}
+.mc-qty-control button{width:26px;height:26px;border-radius:50%;border:none;background:#c52a1a;color:#fff;font-size:.85rem;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mc-qty-control button:hover{background:#a4200f}
+.mc-qty-control .mc-minus{background:#8a7a68}.mc-qty-control .mc-minus:hover{background:#6f6152}
+.mc-qty-control button:disabled{opacity:.4;cursor:not-allowed}
+.mc-qty-display{font-weight:700;font-size:.9rem;min-width:44px;height:26px;text-align:center;color:#2a2a2a;border:1px solid #d4c5b8;border-radius:8px;background:white;padding:2px 8px;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+.mc-qty-display:hover{border-color:#c52a1a;background:#fff8f5}
+.menu-card.active .mc-qty-display{color:#4a3a1a;border-color:#c39a5f}
+.menu-card.cat-skewers{background:#fff5ec;border-top:4px solid #e0812f}
+.menu-card.cat-sides{background:#eef8ee;border-top:4px solid #4f9e5c}
+.menu-card.cat-drinks{background:#eaf4fb;border-top:4px solid #2f8fc2}
+.menu-card.cat-plates{background:#f8eef5;border-top:4px solid #a13f9c}
+.menu-card.cat-skewers.active,.menu-card.cat-sides.active,.menu-card.cat-drinks.active,.menu-card.cat-plates.active{background:#d3ab73}
+.menu-card.cat-skewers.active{border-top-color:#e0812f}.menu-card.cat-sides.active{border-top-color:#4f9e5c}.menu-card.cat-drinks.active{border-top-color:#2f8fc2}.menu-card.cat-plates.active{border-top-color:#a13f9c}
+.order-footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding-top:1rem;border-top:2px dashed #d4c5b8;margin-top:.8rem;gap:10px}
+.total-box{background:#f5ede6;padding:.6rem 1.6rem;border-radius:60px;font-size:1.1rem;font-weight:700;color:#3a2c1c;display:inline-flex;align-items:center;gap:12px}
+.total-box i{color:#c52a1a;font-size:1.4rem}
+.total-box span{background:#3a2c1c;color:white;padding:0 16px;border-radius:60px;line-height:2.1rem}
+.print-note{color:#7a5f4b;font-size:.85rem;display:flex;align-items:center;gap:8px}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal-box{background:white;border-radius:24px;padding:2rem 1.8rem;max-width:560px;width:90%;box-shadow:0 30px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
+.modal-box h2{font-size:1.4rem;color:#3a2c1c;margin-bottom:.4rem;display:flex;align-items:center;gap:10px}
+.modal-box h2 i{color:#e6b325}
+.modal-box .subtitle{color:#8a7a6a;margin-bottom:1.5rem;font-size:.9rem}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-weight:600;margin-bottom:5px;color:#3a2c1c;font-size:.88rem}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:2px solid #e3d7cc;border-radius:12px;font-size:1rem;background:#fefcf9}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#c52a1a}
+.form-row{display:flex;gap:12px}
+.form-row .form-group{flex:1}
+.modal-actions{display:flex;gap:10px;margin-top:1.2rem}
+.modal-actions .btn{flex:1;justify-content:center;padding:.8rem}
+.option-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.option-group label{font-weight:600;color:#3a2c1c;font-size:.95rem;display:flex;align-items:center;gap:6px}
+.option-group label i{color:#c52a1a}
+.option-group select,.option-group input{padding:6px 14px;border:2px solid #d4c5b8;border-radius:40px;font-size:.9rem;background:white}
+.order-options{background:#faf6f0;border-radius:16px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;border:1px solid #e3d7cc;display:flex;flex-wrap:wrap;gap:1rem 2rem;align-items:center}
+.option-badge{background:#e6b325;color:#3a2c1c;padding:2px 14px;border-radius:40px;font-size:.8rem;font-weight:600}
+.keypad-display{font-size:2rem;font-weight:800;text-align:center;background:#f6efe8;border:1px solid #d4c5b8;border-radius:12px;padding:.6rem;margin-bottom:1rem;color:#2c1d14;letter-spacing:2px}
+.keypad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.keypad-grid button{font-size:1.2rem;font-weight:700;padding:.8rem 0;border:1px solid #d4c5b8;border-radius:12px;background:#fefcf9;color:#3a2c1c;cursor:pointer}
+.keypad-grid button:hover{background:#f0e4d8}
+.keypad-grid button.keypad-clear{color:#c52a1a}
+.keypad-grid button.keypad-backspace{color:#8a5a1a}
+.held-item,.invoice-row,.reservation-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#faf6f0;border:1px solid #e3d7cc;border-radius:14px;padding:.9rem 1.1rem;margin-bottom:10px;flex-wrap:wrap}
+.held-item-info,.invoice-row-info,.reservation-row-info{display:flex;flex-direction:column;gap:3px}
+.held-item-title,.invoice-row-title,.reservation-row-title{font-weight:700;color:#3a2c1c;display:flex;align-items:center;gap:8px}
+.held-item-meta,.invoice-row-meta,.reservation-row-meta{font-size:.82rem;color:#8a7a6a;display:flex;flex-wrap:wrap;gap:10px}
+.held-item-total{font-weight:700;color:#c52a1a}
+.invoice-row-total{font-weight:700;color:#1f5a3a}
+.held-item-actions,.invoice-row-actions,.reservation-row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.held-item-actions .btn,.invoice-row-actions .btn,.reservation-row-actions .btn{padding:.4rem 1rem;font-size:.82rem}
+.empty-state{text-align:center;color:#a38774;padding:1.8rem 1rem;font-size:.92rem}
+.summary-box{background:#faf6f0;border:1px solid #e3d7cc;border-radius:16px;padding:1.2rem 1.4rem;margin:1rem 0}
+.summary-line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #e3d7cc;font-size:.92rem;color:#3a2c1c}
+.summary-line:last-child{border-bottom:none;font-weight:700;font-size:1.05rem;color:#1f5a3a}
+.stats-section-title{font-weight:700;color:#3a2c1c;margin:1.2rem 0 .6rem;display:flex;align-items:center;gap:8px}
+.stats-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.stats-table th{text-align:right;padding:.6rem .8rem;background:#f6efe8;border-bottom:2px solid #d4c5b8;font-size:.82rem}
+.stats-table td{padding:.55rem .8rem;border-bottom:1px solid #ede3da}
+.split-summary{text-align:center;font-weight:700;color:#3a2c1c;background:#faf6f0;border:1px solid #e3d7cc;border-radius:14px;padding:.8rem;margin-bottom:12px}
+.split-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+.split-person{background:#fcf0ea;border:1px solid #f0d9cf;border-radius:14px;padding:.8rem .6rem;text-align:center}
+.split-person-label{font-size:.78rem;color:#8a7a6a;display:block;margin-bottom:4px}
+.split-person-amount{font-weight:700;font-size:1rem;color:#c52a1a}
+.invoice-preview-box{background:#faf6f0;border:1px dashed #d4c5b8;border-radius:14px;padding:1rem 1.2rem;font-size:.88rem;color:#3a2c1c;max-height:50vh;overflow-y:auto}
+.invoice-preview-box .ip-row{display:flex;justify-content:space-between;padding:3px 0}
+.invoice-preview-box .ip-divider{border-top:1px dashed #cbb9a6;margin:8px 0}
+.invoice-preview-box .ip-item{padding:4px 0}
+.invoice-preview-box .ip-item-name{font-weight:700}
+.reservation-status-badge{font-size:.75rem;font-weight:700;padding:3px 12px;border-radius:40px;display:inline-block}
+.reservation-status-badge.upcoming{background:#f7e3d4;color:#a55f3a}
+.reservation-status-badge.arrived{background:#d0e6d9;color:#1a6b3f}
+.reservation-status-badge.cancelled{background:#e9e5e0;color:#999}
+.reservation-res-no{background:#3a2c1c;color:white;font-size:.72rem;font-weight:700;padding:2px 10px;border-radius:40px}
+.reservation-row.status-cancelled{opacity:.55}
+.reservation-form-box{background:#faf6f0;border:1px solid #e3d7cc;border-radius:20px;padding:1.4rem 1.6rem}
+.no-print{}
+#printReceipt{display:none}
+@media(max-width:900px){.menu-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.menu-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){
+body{padding:1rem .5rem}
+.order-card,.tables-page{padding:1.2rem 1rem;border-radius:18px}
+.restaurant-name h1{font-size:1.3rem}
+.restaurant-name .logo-circle{width:45px;height:45px;font-size:20px}
+.order-meta{font-size:.78rem;padding:.4rem 1rem;width:100%;justify-content:center}
+.order-options{padding:1rem;flex-direction:column;align-items:stretch}
+.option-group{justify-content:space-between}
+.option-group input[type="text"]{min-width:120px;flex:1}
+.toolbar{flex-direction:column;align-items:stretch}
+.badge-count{justify-content:center}
+.btn-group{flex-direction:column}
+.btn-group .btn{justify-content:center;width:100%}
+.total-box{font-size:.95rem;padding:.4rem 1.2rem;width:100%;justify-content:center}
+.btn{padding:.4rem 1rem;font-size:.8rem}
+.modal-box{padding:1.5rem 1rem;border-radius:18px}
+.form-row{flex-direction:column;gap:0}
+.page-nav{flex-wrap:wrap}
+.nav-btn{flex:1 1 100%}
+table{font-size:.9rem}
+th,td{padding:.5rem .6rem}
+}
+@media print{
+@page{size:80mm auto;margin:0}
+html,body{width:80mm;background:white;padding:0;margin:0;display:block}
+.order-card,.tables-page,.page-nav,.modal-overlay,#connectionStatus,#notificationsWrap{display:none!important}
+#printReceipt{display:block!important;box-sizing:border-box;width:62mm;margin:0 6mm 4mm 12mm;padding:1mm 0 4mm 0;font-family:'Tahoma','Arial',sans-serif;color:#000;font-size:11px;line-height:1.5;overflow:hidden}
+#printReceipt *{box-sizing:border-box;color:#000!important;background:transparent!important}
+.r-center{text-align:center}
+.r-logo{font-size:19px;font-weight:900;letter-spacing:1px}
+.r-sub{font-size:10px;margin-top:1mm}
+.r-doc-title{font-size:11.5px;font-weight:700;margin-top:2mm}
+.r-divider{border-top:1px dashed #000;margin:2mm 0}
+.r-row{display:flex;justify-content:space-between;align-items:baseline;width:100%;gap:3mm}
+.r-row .r-right{flex:1 1 auto;min-width:0;text-align:right;unicode-bidi:plaintext;overflow-wrap:break-word}
+.r-row .r-left{flex:0 0 auto;text-align:left;direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.r-meta-row{font-size:10.5px;font-weight:700;margin:.7mm 0}
+.r-options-row{font-size:10.5px;font-weight:700;text-align:center;margin:1mm 0}
+.r-item{margin:1.2mm 0}
+.r-item-name-line{font-weight:700;font-size:11.5px;text-align:right}
+.r-item-options-line{font-size:9px;text-align:right;margin-top:.3mm;color:#333!important}
+.r-item-sub{font-size:10.5px;font-weight:700;margin-top:.5mm;color:#000!important}
+.r-total-row{font-size:13.5px;font-weight:900;margin-top:1mm}
+.r-count-row{font-size:10px;margin-top:.5mm}
+.r-footer{text-align:center;font-size:9.5px;margin-top:2.5mm}
+.r-footer div{margin:.5mm 0}
+.r-qrcode{display:flex;justify-content:center;align-items:center;margin:2.5mm 0}
+.r-qrcode img,.r-qrcode canvas{width:32mm;height:32mm}
+}
+</style>
+</head>
+<body>
+<div id="connectionStatus"><i class="fas fa-circle"></i> <span id="connText">متصل</span></div>
+<div id="notificationsWrap"></div>
+<div class="page-nav no-print">
+<button class="btn nav-btn active" id="navTablesBtn" onclick="switchToTablesPage()"><i class="fas fa-chair"></i> الطاولات</button>
+<button class="btn nav-btn" id="navOrdersBtn" onclick="switchToOrdersPage()"><i class="fas fa-receipt"></i> الطلبات</button>
+<button class="btn nav-btn" id="navReservationsBtn" onclick="switchToReservationsPage()"><i class="fas fa-calendar-check"></i> الحجوزات</button>
+</div>
+<div class="tables-page" id="tablesPage">
+<div class="tables-page-header">
+<h1><i class="fas fa-chair"></i> الطاولات</h1>
+<p>اختر طاولة للدخول على طلبها</p>
+</div>
+<div class="tables-grid" id="tablesGrid"></div>
+</div>
+<div class="tables-page" id="reservationsPage" style="display:none">
+<div class="tables-page-header">
+<h1><i class="fas fa-calendar-check"></i> حجوزات الطاولات</h1>
+<p>سجّل حجز جديد وتابع الحجوزات</p>
+</div>
+<div class="reservation-form-box">
+<div class="form-row">
+<div class="form-group"><label>اسم الزبون *</label><input type="text" id="resNameInput" placeholder="أبو فهد" /></div>
+<div class="form-group"><label>رقم الجوال *</label><input type="tel" id="resPhoneInput" placeholder="05xxxxxxxx" /></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>التاريخ *</label><input type="date" id="resDateInput" /></div>
+<div class="form-group"><label>الوقت *</label><input type="time" id="resTimeInput" /></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>عدد الأشخاص</label><input type="number" id="resGuestsInput" min="1" value="2" /></div>
+<div class="form-group"><label>الطاولة (اختياري)</label><select id="resTableInput"><option value="">بدون تحديد</option></select></div>
+</div>
+<div class="form-group"><label>ملاحظات</label><input type="text" id="resNotesInput" placeholder="ملاحظات..." /></div>
+<button class="btn btn-add" style="width:100%;justify-content:center" onclick="addReservation()"><i class="fas fa-plus-circle"></i> إضافة الحجز</button>
+</div>
+<div class="stats-section-title" style="margin-top:1.5rem"><i class="fas fa-list"></i> الحجوزات</div>
+<div id="reservationsListWrap"></div>
+</div>
+<div class="order-card" id="ordersPage" style="display:none">
+<div class="order-header">
+<div class="restaurant-name">
+<div class="logo-circle">ش</div>
+<div><h1>بسطة شوي</h1><small><i class="fas fa-map-pin"></i> بن علي · مشويات وكباب</small></div>
+</div>
+<div class="order-meta">
+<span class="order-meta-item order-meta-orderno"><i class="fas fa-receipt"></i> طلب #<span id="orderMetaNo">0</span></span>
+<span class="order-meta-item"><i class="fas fa-calendar-alt"></i> <span id="orderMetaDate">--</span></span>
+<span class="order-meta-item"><i class="fas fa-clock"></i> <span id="orderMetaTime">--:--:--</span></span>
+</div>
+</div>
+<div class="order-options no-print">
+<div class="option-group">
+<label><i class="fas fa-truck"></i> طريقة التقديم</label>
+<select id="serviceType" onchange="updateOrderOptions()">
+<option value="تناول في المطعم">تناول في المطعم</option>
+<option value="طاولة" selected>طاولة</option>
+<option value="طلبات خارجية">طلبات خارجية</option>
+<option value="توصيل">توصيل</option>
+</select>
+</div>
+<div class="option-group" id="tableNumberGroup">
+<label><i class="fas fa-chair"></i> رقم الطاولة</label>
+<input type="text" id="tableNumber" placeholder="رقم الطاولة" onchange="updateOrderOptions()" />
+</div>
+<div class="option-group">
+<label><i class="fas fa-sticky-note"></i> ملاحظات</label>
+<input type="text" id="orderNotes" placeholder="ملاحظات..." />
+</div>
+<span class="option-badge" id="optionSummary">طاولة</span>
+</div>
+<div class="toolbar">
+<div class="badge-count" id="itemCount"><i class="fas fa-list-ul"></i> <span id="countDisplay">0</span> صنف</div>
+<div class="btn-group no-print">
+<button class="btn btn-add" onclick="openModal()"><i class="fas fa-plus-circle"></i> إضافة طلب</button>
+<button class="btn btn-primary" onclick="printReceiptNow()"><i class="fas fa-print"></i> طباعة (POS-80)</button>
+<button class="btn btn-outline" onclick="closeInvoiceWithoutPrint()"><i class="fas fa-check-circle"></i> إغلاق بدون طباعة</button>
+<button class="btn btn-outline" onclick="holdInvoice()"><i class="fas fa-pause-circle"></i> تعليق الفاتورة</button>
+<button class="btn btn-outline" onclick="openHeldModal()"><i class="fas fa-layer-group"></i> الفواتير المعلقة <span class="held-count-badge" id="heldCountBadge" style="display:none">0</span></button>
+<button class="btn btn-outline" onclick="openItemManageModal()"><i class="fas fa-edit"></i> إضافة / تعديل صنف</button>
+<button class="btn btn-danger" onclick="openClosingModal()"><i class="fas fa-lock"></i> إغلاق اليومية</button>
+<button class="btn btn-success" onclick="openStatsModal()"><i class="fas fa-chart-bar"></i> الإحصائيات</button>
+<button class="btn btn-outline" onclick="openInvoicesModal()"><i class="fas fa-history"></i> الفواتير السابقة</button>
+</div>
+</div>
+<div class="menu-grid-wrapper no-print">
+<div class="menu-grid-header">
+<div class="menu-grid-title"><i class="fas fa-fire"></i> القائمة — اضغط لإضافة</div>
+</div>
+<div class="menu-grid" id="menuGrid"></div>
+</div>
+<div class="order-footer">
+<div class="total-box"><i class="fas fa-wallet"></i> الإجمالي <span id="grandTotal">0.00 ر.س</span></div>
+<button class="btn btn-outline no-print" onclick="openSplitModal()"><i class="fas fa-users"></i> تقسيم الفاتورة</button>
+<div class="print-note no-print"><i class="fas fa-print"></i> <span>للطباعة: <kbd>Ctrl+P</kbd></span></div>
+</div>
+<div style="margin-top:1.5rem;text-align:left;font-size:.75rem;color:#a38774;border-top:1px solid #e3d7cc;padding-top:1rem;display:flex;justify-content:space-between;flex-wrap:wrap">
+<span><i class="fas fa-store-alt"></i> بسطة شوي</span>
+<span><i class="fas fa-phone-alt"></i> 0507296282</span>
+<span><i class="fas fa-map-pin"></i> بن علي</span>
+</div>
+</div>
+<div id="printReceipt"></div>
+<div class="modal-overlay" id="addModal">
+<div class="modal-box">
+<h2><i class="fas fa-plus-circle"></i> إضافة طلب جديد</h2>
+<p class="subtitle">أدخل تفاصيل الصنف الجديد</p>
+<div class="form-group"><label>اسم الصنف *</label><input type="text" id="itemNameInput" placeholder="شاورما دجاج" /></div>
+<div class="form-group"><label>الوصف (اختياري)</label><input type="text" id="itemDescInput" placeholder="مع صوص الثوم" /></div>
+<div class="form-row">
+<div class="form-group"><label>السعر (ر.س) *</label><input type="number" id="itemPriceInput" placeholder="18" step="0.01" min="0" /></div>
+<div class="form-group"><label>الكمية *</label><input type="number" id="itemQtyInput" placeholder="3" min="0" value="0" /></div>
+</div>
+<div class="form-group"><label>خيارات الطلب</label><input type="text" id="itemOptionsInput" placeholder="حار، بدون جلد" /></div>
+<div class="form-group"><label>الحجم</label><select id="itemSizeInput"><option value="صغير">صغير</option><option value="متوسط" selected>متوسط</option><option value="كبير">كبير</option></select></div>
+<div class="modal-actions">
+<button class="btn btn-cancel" onclick="closeModal()">إلغاء</button>
+<button class="btn btn-primary" onclick="addOrder()" style="flex:2"><i class="fas fa-check"></i> إضافة</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="itemManageModal">
+<div class="modal-box">
+<h2 id="itemManageTitle"><i class="fas fa-edit"></i> إضافة / تعديل صنف</h2>
+<p class="subtitle">اختر صنفاً لتعديله أو اتركه لإضافة جديد</p>
+<div class="form-group"><label>الصنف</label><select id="mgmtSelectInput" onchange="onItemManageSelectChange(this.value)"><option value="">-- صنف جديد --</option></select></div>
+<div class="form-group"><label>اسم الصنف *</label><input type="text" id="mgmtNameInput" placeholder="شاورما دجاج" /></div>
+<div class="form-group"><label>الوصف</label><input type="text" id="mgmtDescInput" placeholder="مع صوص الثوم" /></div>
+<div class="form-row">
+<div class="form-group"><label>السعر (ر.س) *</label><input type="number" id="mgmtPriceInput" placeholder="18" step="0.01" min="0" /></div>
+<div class="form-group"><label>الحجم</label><select id="mgmtSizeInput"><option value="صغير">صغير</option><option value="متوسط" selected>متوسط</option><option value="كبير">كبير</option></select></div>
+</div>
+<div class="form-group"><label>التصنيف</label><select id="mgmtCategoryInput"><option value="skewers">أسياخ</option><option value="plates">أطباق</option><option value="sides">أطباق جانبية</option><option value="drinks">مشروبات</option></select></div>
+<div class="modal-actions">
+<button class="btn btn-danger" id="mgmtDeleteBtn" onclick="deleteItemFromManageModal()" style="display:none"><i class="fas fa-trash"></i> حذف</button>
+<button class="btn btn-cancel" onclick="closeItemManageModal()">إلغاء</button>
+<button class="btn btn-primary" onclick="saveItemManage()" style="flex:2"><i class="fas fa-check"></i> حفظ</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="qtyKeypadModal">
+<div class="modal-box" style="max-width:360px">
+<h2 id="keypadItemTitle"><i class="fas fa-calculator"></i> إدخال الكمية</h2>
+<div class="keypad-display" id="keypadDisplay">0</div>
+<div class="keypad-grid">
+<button onclick="keypadPress('1')">1</button><button onclick="keypadPress('2')">2</button><button onclick="keypadPress('3')">3</button>
+<button onclick="keypadPress('4')">4</button><button onclick="keypadPress('5')">5</button><button onclick="keypadPress('6')">6</button>
+<button onclick="keypadPress('7')">7</button><button onclick="keypadPress('8')">8</button><button onclick="keypadPress('9')">9</button>
+<button class="keypad-clear" onclick="keypadClear()">C</button><button onclick="keypadPress('0')">0</button>
+<button class="keypad-backspace" onclick="keypadBackspace()"><i class="fas fa-backspace"></i></button>
+</div>
+<div class="modal-actions">
+<button class="btn btn-cancel" onclick="closeQtyKeypad()">إلغاء</button>
+<button class="btn btn-primary" onclick="keypadConfirm()" style="flex:2"><i class="fas fa-check"></i> تأكيد</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="heldModal">
+<div class="modal-box" style="max-width:640px">
+<h2><i class="fas fa-layer-group"></i> الفواتير المعلقة</h2>
+<p class="subtitle">استرجع فاتورة للتعديل عليها</p>
+<div id="heldListWrap" style="max-height:55vh;overflow-y:auto"></div>
+<div class="modal-actions"><button class="btn btn-cancel" onclick="closeHeldModal()" style="flex:1">إغلاق</button></div>
+</div>
+</div>
+<div class="modal-overlay" id="closingModal">
+<div class="modal-box" style="max-width:560px">
+<h2><i class="fas fa-lock"></i> إغلاق اليومية</h2>
+<p class="subtitle">تقفيل المبيعات المسجلة</p>
+<div id="closingSummaryWrap"></div>
+<div class="modal-actions">
+<button class="btn btn-cancel" onclick="closeClosingModal()">إلغاء</button>
+<button class="btn btn-danger" onclick="confirmClosing()" style="flex:2"><i class="fas fa-lock"></i> تأكيد الإغلاق</button>
+</div>
+<div id="closingHistoryWrap" style="margin-top:1.5rem"></div>
+</div>
+</div>
+<div class="modal-overlay" id="statsModal">
+<div class="modal-box" style="max-width:680px">
+<h2><i class="fas fa-chart-bar"></i> الإحصائيات</h2>
+<p class="subtitle">المبيعات اليومية والشهرية</p>
+<div id="statsWrap" style="max-height:60vh;overflow-y:auto"></div>
+<div class="modal-actions"><button class="btn btn-cancel" onclick="closeStatsModal()" style="flex:1">إغلاق</button></div>
+</div>
+</div>
+<div class="modal-overlay" id="splitModal">
+<div class="modal-box" style="max-width:480px">
+<h2><i class="fas fa-users"></i> تقسيم الفاتورة</h2>
+<p class="subtitle">قسّم الإجمالي على عدد الأشخاص</p>
+<div class="form-group"><label>عدد الأشخاص</label><input type="number" id="splitPeopleInput" min="1" step="1" value="2" oninput="calculateSplit()" /></div>
+<div id="splitResultWrap"></div>
+<div class="modal-actions"><button class="btn btn-cancel" onclick="closeSplitModal()" style="flex:1">إغلاق</button></div>
+</div>
+</div>
+<div class="modal-overlay" id="invoicesModal">
+<div class="modal-box" style="max-width:640px">
+<h2><i class="fas fa-history"></i> الفواتير السابقة</h2>
+<p class="subtitle">عرض أو إعادة طباعة</p>
+<div class="form-group"><input type="text" id="invoiceSearchInput" placeholder="ابحث برقم الفاتورة..." oninput="renderInvoicesList()" /></div>
+<div id="invoicesListWrap" style="max-height:50vh;overflow-y:auto"></div>
+<div class="modal-actions"><button class="btn btn-cancel" onclick="closeInvoicesModal()" style="flex:1">إغلاق</button></div>
+</div>
+</div>
+<div class="modal-overlay" id="invoicePreviewModal">
+<div class="modal-box" style="max-width:420px">
+<h2><i class="fas fa-receipt"></i> معاينة الفاتورة</h2>
+<p class="subtitle">تأكد قبل إعادة الطباعة</p>
+<div id="invoicePreviewWrap" class="invoice-preview-box"></div>
+<div class="modal-actions">
+<button class="btn btn-cancel" onclick="closeInvoicePreviewModal()">إغلاق</button>
+<button class="btn btn-primary" id="invoicePreviewPrintBtn" style="flex:2"><i class="fas fa-print"></i> طباعة</button>
+</div>
+</div>
+</div>
+<script>
+const SELLER_NAME='بسطة شوي';
+const SELLER_VAT_NUMBER='311308159100003';
+function tlvField(tag,value){const v=new TextEncoder().encode(String(value));const f=new Uint8Array(2+v.length);f[0]=tag;f[1]=v.length;f.set(v,2);return f;}
+function buildZatcaQrData(sn,vn,ts,total,vat){const fs=[tlvField(1,sn),tlvField(2,vn),tlvField(3,ts),tlvField(4,Number(total).toFixed(2)),tlvField(5,Number(vat).toFixed(2))];const tl=fs.reduce((s,f)=>s+f.length,0);const c=new Uint8Array(tl);let o=0;fs.forEach(f=>{c.set(f,o);o+=f.length});let b='';c.forEach(x=>{b+=String.fromCharCode(x)});return btoa(b);}
+function renderZatcaQrCode(id,data){const el=document.getElementById(id);if(!el||typeof QRCode==='undefined')return;el.innerHTML='';new QRCode(el,{text:data,width:120,height:120,correctLevel:QRCode.CorrectLevel.M});}
 
+const TABLE_COUNT=10;
+let currentTableNumber=null;
+let zeroQtyHidden=false;
+
+let orders=[
+{name:'سيخ اوصال لحم',desc:'مشوي على الفحم',price:6.00,qty:0,options:'',size:'متوسط',category:'skewers'},
+{name:'سيخ اوصال لحم (غنم)',desc:'مشوي على الفحم',price:10.00,qty:0,options:'',size:'متوسط',category:'skewers'},
+{name:'سيخ اوصال دجاج',desc:'متبل بالليمون',price:6.00,qty:0,options:'',size:'متوسط',category:'skewers'},
+{name:'سيخ كباب لحم',desc:'لحم مفروم طازج',price:6.00,qty:0,options:'',size:'متوسط',category:'skewers'},
+{name:'سيخ كباب دجاج',desc:'مفروم بالبهارات',price:6.00,qty:0,options:'',size:'متوسط',category:'skewers'},
+{name:'سيخ اجنحة دجاج',desc:'مشوية بالصوص',price:6.00,qty:0,options:'',size:'كبير',category:'skewers'},
+{name:'سيخ دجاج بالعظم',desc:'مشوي بالتوابل',price:7.00,qty:0,options:'',size:'كبير',category:'skewers'},
+{name:'سيخ كبدة',desc:'طازجة مع البصل',price:7.00,qty:0,options:'',size:'صغير',category:'skewers'},
+{name:'سيخ ربيان مشوي',desc:'ربيان طازج مشوي',price:8.00,qty:0,options:'',size:'متوسط',category:'skewers'},
+{name:'صحن ريش غنم',desc:'ريش غنم مشوية',price:55.00,qty:0,options:'',size:'كبير',category:'plates'},
+{name:'صحن ستيك',desc:'ستيك مشوي',price:45.00,qty:0,options:'',size:'كبير',category:'plates'},
+{name:'صحن بطاطس',desc:'بطاطس مقلية',price:8.00,qty:0,options:'',size:'كبير',category:'sides'},
+{name:'صحن حمص',desc:'حمص بالطحينة',price:9.00,qty:0,options:'',size:'متوسط',category:'sides'},
+{name:'شوربة',desc:'شوربة ساخنة',price:7.00,qty:0,options:'',size:'متوسط',category:'sides'},
+{name:'مشروبات غازية',desc:'كولا / سبرايت',price:3.00,qty:0,options:'',size:'متوسط',category:'drinks'},
+{name:'شربت',desc:'مشروب شربت',price:5.00,qty:0,options:'',size:'متوسط',category:'drinks'},
+{name:'سن توب',desc:'عصير برتقال',price:2.00,qty:0,options:'',size:'متوسط',category:'drinks'},
+{name:'سن كولا',desc:'كولا خفيفة',price:2.00,qty:0,options:'',size:'صغير',category:'drinks'},
+{name:'مياه',desc:'مياه معدنية',price:1.00,qty:0,options:'',size:'صغير',category:'drinks'},
+{name:'عصير برتقال طبيعي',desc:'طازج 100%',price:9.00,qty:0,options:'',size:'متوسط',category:'drinks'}
+];
+
+function showNotification(msg,type='info',dur=3500){
+const w=document.getElementById('notificationsWrap');if(!w)return;
+const n=document.createElement('div');n.className='notif-toast '+type;
+const icons={info:'fa-info-circle',success:'fa-check-circle',error:'fa-exclamation-circle',warning:'fa-exclamation-triangle'};
+n.innerHTML='<i class="fas '+(icons[type]||icons.info)+'"></i><span>'+msg+'</span>';
+w.appendChild(n);
+setTimeout(()=>{n.style.opacity='0';n.style.transform='translateX(30px)';setTimeout(()=>n.remove(),300)},dur);
+}
+
+let fbReady=false;
+let isRemoteUpdate=false;
+let lastKnownHeldCount=0;
+
+window.addEventListener('firebase-ready',()=>{fbReady=true;console.log('🔗 Smart Sync: Firebase جاهز');initSmartSync();});
+
+function initSmartSync(){
+if(!window.FB||!window.FB.ready)return;
+const db=window.FB.db,ref=window.FB.ref,onValue=window.FB.onValue;
+
+// 1) الطاولات
+onValue(ref(db,'tableStates'),(snap)=>{
+const data=snap.val()||{};
+try{localStorage.setItem('basta_table_orders',JSON.stringify(data))}catch(e){}
+isRemoteUpdate=true;
+if(typeof renderTablesGrid==='function')renderTablesGrid();
+isRemoteUpdate=false;
+});
+
+// 2) الطاولات - عدادات
+onValue(ref(db,'tableSessions'),(snap)=>{
+const data=snap.val()||{};
+try{localStorage.setItem('basta_table_sessions',JSON.stringify(data))}catch(e){}
+if(typeof renderTablesGrid==='function')renderTablesGrid();
+});
+
+// 3) الأصناف (مع الكميات!)
+onValue(ref(db,'menuItems'),(snap)=>{
+const data=snap.val();
+if(data&&Array.isArray(data)&&data.length>0&&!isRemoteUpdate){
+// نحافظ على الكميات المحلية إذا كان عندنا طلب شغال
+const currentQty={};
+orders.forEach(o=>{if(o.qty>0)currentQty[o.name]={qty:o.qty,options:o.options}});
+// استبدل بالبيانات الجديدة، لكن احتفظ بالكميات المحلية النشطة
+orders.length=0;
+data.forEach(item=>{
+orders.push({
+...item,
+qty:(currentQty[item.name]?.qty)||0,
+options:(currentQty[item.name]?.options)||''
+});
+});
+isRemoteUpdate=true;
+if(typeof renderTable==='function')renderTable();
+isRemoteUpdate=false;
+}
+});
+
+// 4) الفواتير المعلقة
+onValue(ref(db,'heldInvoices'),(snap)=>{
+const data=snap.val()||[];
+const oc=lastKnownHeldCount;
+lastKnownHeldCount=data.length;
+if(oc>0&&data.length>oc)showNotification('📥 وصلت '+(data.length-oc)+' فاتورة معلقة جديدة','info');
+try{localStorage.setItem('basta_held',JSON.stringify(data))}catch(e){}
+if(typeof renderHeldBadge==='function')renderHeldBadge();
+});
+
+// 5) المبيعات
+onValue(ref(db,'salesLog'),(snap)=>{
+const data=snap.val()||[];
+try{localStorage.setItem('basta_sales',JSON.stringify(data))}catch(e){}
+});
+
+// 6) الإغلاقات
+onValue(ref(db,'closings'),(snap)=>{
+const data=snap.val()||[];
+try{localStorage.setItem('basta_closings',JSON.stringify(data))}catch(e){}
+});
+
+// 7) الحجوزات
+onValue(ref(db,'reservations'),(snap)=>{
+const data=snap.val()||[];
+try{localStorage.setItem('basta_reservations',JSON.stringify(data))}catch(e){}
+if(typeof renderReservationsList==='function')renderReservationsList();
+});
+
+// 8) العدادات
+onValue(ref(db,'counters'),(snap)=>{
+const data=snap.val();
+if(data){
+if(data.invoice)try{localStorage.setItem('basta_invoice_seq',String(data.invoice))}catch(e){}
+if(data.order)try{localStorage.setItem('basta_order_seq',String(data.order))}catch(e){}
+}
+});
+
+// مؤشر الاتصال
+onValue(ref(db,'.info/connected'),(snap)=>{
+const c=snap.val()===true;
+const el=document.getElementById('connectionStatus');
+const t=document.getElementById('connText');
+if(el&&t){
+if(c){el.classList.remove('offline');t.textContent='متصل';}
+else{el.classList.add('offline');t.textContent='غير متصل';}
+}
+});
+
+console.log('✅ Smart Sync: كل المستمعات جاهزة');
+showNotification('🔗 تم الاتصال بـ Firebase','success',2500);
+}
+
+// دوال الرفع
+async function fbSaveTableStates(s){if(!window.FB||!window.FB.ready||isRemoteUpdate)return;try{await window.FB.set(window.FB.ref(window.FB.db,'tableStates'),s)}catch(e){}}
+async function fbSaveTableSessions(s){if(!window.FB||!window.FB.ready)return;try{await window.FB.set(window.FB.ref(window.FB.db,'tableSessions'),s)}catch(e){}}
+async function fbSaveMenuItems(items){
+if(!window.FB||!window.FB.ready)return;
+try{
+const toSave=items.map(item=>({
+name:item.name,desc:item.desc||'',price:item.price,
+size:item.size||'متوسط',category:item.category||'skewers',
+qty:item.qty||0,options:item.options||''
+}));
+await window.FB.set(window.FB.ref(window.FB.db,'menuItems'),toSave);
+}catch(e){console.error('❌ فشل رفع القائمة:',e);}
+}
+async function fbSaveHeldInvoices(l){if(!window.FB||!window.FB.ready)return;try{await window.FB.set(window.FB.ref(window.FB.db,'heldInvoices'),l)}catch(e){}}
+async function fbSaveSalesLog(l){if(!window.FB||!window.FB.ready)return;try{await window.FB.set(window.FB.ref(window.FB.db,'salesLog'),l)}catch(e){}}
+async function fbSaveClosings(l){if(!window.FB||!window.FB.ready)return;try{await window.FB.set(window.FB.ref(window.FB.db,'closings'),l)}catch(e){}}
+async function fbSaveReservations(l){if(!window.FB||!window.FB.ready)return;try{await window.FB.set(window.FB.ref(window.FB.db,'reservations'),l)}catch(e){}}
+async function fbSaveCounters(inv,ord,res){
+if(!window.FB||!window.FB.ready)return;
+try{const data={};if(inv)data.invoice=inv;if(ord)data.order=ord;if(res)data.res=res;await window.FB.update(window.FB.ref(window.FB.db,'counters'),data)}catch(e){}
+}
+
+// العرض
+function renderMenuGrid(){
+const grid=document.getElementById('menuGrid');if(!grid)return;
+grid.innerHTML='';
+orders.forEach((o,i)=>{
+if(zeroQtyHidden&&o.qty===0)return;
+const card=document.createElement('div');
+card.className='menu-card'+(o.category?' cat-'+o.category:'')+(o.qty>0?' active':'');
+card.innerHTML=(o.qty>0?'<span class="mc-badge">'+o.qty+'</span>':'')+
+'<span class="mc-name">'+o.name+'</span>'+
+'<span class="mc-price">'+o.price.toFixed(2)+'</span>'+
+'<div class="mc-qty-control">'+
+'<button class="mc-minus" '+(o.qty===0?'disabled':'')+' onclick="event.stopPropagation();changeQty('+i+',-1)"><i class="fas fa-minus"></i></button>'+
+'<button class="mc-qty-display" onclick="event.stopPropagation();openQtyKeypad('+i+')"><i class="fas fa-calculator"></i> '+o.qty+'</button>'+
+'<button class="mc-plus" onclick="event.stopPropagation();changeQty('+i+',1)"><i class="fas fa-plus"></i></button>'+
+'</div>'+
+(o.qty>0?'<input type="text" class="mc-options-input" value="'+(o.options||'')+'" placeholder="خيارات..." onclick="event.stopPropagation()" onchange="updateOptions('+i+',this.value)" />':'');
+card.onclick=()=>addWithPendingQty(i);
+grid.appendChild(card);
+});
+}
+
+function renderTable(){
+renderMenuGrid();
+const activeCount=orders.filter(o=>o.qty>0).length;
+const el=document.getElementById('countDisplay');if(el)el.textContent=activeCount;
+updateTotals();
+renderPrintReceipt();
+const mo=document.getElementById('orderMetaNo');if(mo)mo.textContent=orderNo;
+}
+
+const AR_MONTHS=['يناير','فبراير','مارس','إبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+function updateOrderMetaClock(){
+try{
+const now=new Date();
+const d=document.getElementById('orderMetaDate');
+const t=document.getElementById('orderMetaTime');
+if(d)d.textContent=String(now.getDate()).padStart(2,'0')+' '+AR_MONTHS[now.getMonth()]+' '+now.getFullYear();
+if(t)t.textContent=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+}catch(e){}
+}
+updateOrderMetaClock();
+setInterval(updateOrderMetaClock,1000);
+
+function changeQty(index,delta){
+const n=orders[index].qty+delta;
+if(n<0)return;
+const wasZero=orders[index].qty===0;
+orders[index].qty=n;
+if(wasZero&&n>0&&currentTableNumber)ensureTableSessionStarted(currentTableNumber);
+renderTable();
+if(typeof fbSaveMenuItems==='function')fbSaveMenuItems(orders);
+}
+
+function setQty(index,value){
+let v=parseInt(value,10);
+if(isNaN(v)||v<0)v=0;
+const wasZero=orders[index].qty===0;
+orders[index].qty=v;
+if(wasZero&&v>0&&currentTableNumber)ensureTableSessionStarted(currentTableNumber);
+renderTable();
+if(typeof fbSaveMenuItems==='function')fbSaveMenuItems(orders);
+}
+  let pendingQty=1;
+function openQtyKeypad(index){
+const item=orders[index];if(!item)return;
+keypadTargetIndex=index;
+keypadValue=item.qty>0?String(item.qty):'';
+document.getElementById('keypadItemTitle').innerHTML='<i class="fas fa-calculator"></i> '+item.name;
+updateKeypadDisplay();
+document.getElementById('qtyKeypadModal').classList.add('active');
+}
+function openGlobalQtyKeypad(){
+keypadTargetIndex='global';
+keypadValue=pendingQty>1?String(pendingQty):'';
+document.getElementById('keypadItemTitle').innerHTML='<i class="fas fa-hashtag"></i> حدد الكمية';
+updateKeypadDisplay();
+document.getElementById('qtyKeypadModal').classList.add('active');
+}
+function updateGlobalQtyBadge(){
+const b=document.getElementById('globalQtyBadge');
+const btn=document.getElementById('globalQtyBtn');
+if(!b||!btn)return;
+if(pendingQty>1){b.textContent='×'+pendingQty;b.style.display='inline-flex';btn.classList.add('qty-armed');}
+else{b.style.display='none';btn.classList.remove('qty-armed');}
+}
+function addWithPendingQty(index){
+const wasZero=orders[index].qty===0;
+orders[index].qty+=pendingQty;
+if(wasZero&&orders[index].qty>0&&currentTableNumber)ensureTableSessionStarted(currentTableNumber);
+if(pendingQty>1){pendingQty=1;updateGlobalQtyBadge();}
+renderTable();
+if(typeof fbSaveMenuItems==='function')fbSaveMenuItems(orders);
+}
+let keypadTargetIndex=null;
+let keypadValue='';
+function updateKeypadDisplay(){document.getElementById('keypadDisplay').textContent=keypadValue===''?'0':keypadValue;}
+function keypadPress(d){if(keypadValue.length>=4)return;keypadValue=(keypadValue==='0'?'':keypadValue)+d;updateKeypadDisplay();}
+function keypadBackspace(){keypadValue=keypadValue.slice(0,-1);updateKeypadDisplay();}
+function keypadClear(){keypadValue='';updateKeypadDisplay();}
+function keypadConfirm(){
+if(keypadTargetIndex===null)return;
+const v=keypadValue===''?0:parseInt(keypadValue,10);
+if(keypadTargetIndex==='global'){pendingQty=v>0?v:1;updateGlobalQtyBadge();}
+else{setQty(keypadTargetIndex,v);}
+closeQtyKeypad();
+}
+function closeQtyKeypad(){document.getElementById('qtyKeypadModal').classList.remove('active');keypadTargetIndex=null;keypadValue='';}
+function updateOptions(index,value){orders[index].options=value.trim();renderPrintReceipt();if(typeof fbSaveMenuItems==='function')fbSaveMenuItems(orders);}
+function toggleHideZeroQty(){
+const hasZero=orders.some(o=>o.qty===0);
+if(!zeroQtyHidden){if(!hasZero){alert('ℹ️ لا توجد كميات صفرية');return;}zeroQtyHidden=true;}
+else{zeroQtyHidden=false;}
+updateHideZeroBtnLabel();renderTable();
+}
+function updateHideZeroBtnLabel(){const l=document.getElementById('hideZeroBtnLabel');if(l)l.textContent=zeroQtyHidden?'إظهار الكل':'إخفاء الصفرية';}
+function resetZeroQtyFilter(){zeroQtyHidden=false;updateHideZeroBtnLabel();}
+function updateTotals(){
+let g=0;orders.forEach(o=>g+=o.price*o.qty);
+const el=document.getElementById('grandTotal');if(el)el.textContent=g.toFixed(2)+' ر.س';
+}
+function computeGrandTotal(){let t=0;orders.forEach(o=>t+=o.price*o.qty);return t;}
+function openSplitModal(){
+const t=computeGrandTotal();
+if(t<=0){alert('⚠️ لا يوجد إجمالي');return;}
+document.getElementById('splitModal').classList.add('active');
+calculateSplit();
+}
+function closeSplitModal(){document.getElementById('splitModal').classList.remove('active');}
+function calculateSplit(){
+const w=document.getElementById('splitResultWrap');
+const t=computeGrandTotal();
+let n=parseInt(document.getElementById('splitPeopleInput').value,10);
+if(!n||n<1){w.innerHTML='<div class="empty-state">أدخل عدد صحيح</div>';return;}
+const tr=Math.round(t);const base=Math.floor(tr/n);const rem=tr-(base*n);
+let html='<div class="split-summary">الإجمالي '+t.toFixed(2)+' ر.س ÷ '+n+' شخص</div><div class="split-list">';
+for(let i=1;i<=n;i++){const a=i<=rem?base+1:base;html+='<div class="split-person"><span class="split-person-label">شخص '+i+'</span><span class="split-person-amount">'+a+' ر.س</span></div>';}
+html+='</div>';
+w.innerHTML=html;
+}
+function updateOrderOptions(){
+const s=document.getElementById('serviceType').value;
+const g=document.getElementById('tableNumberGroup');
+const t=document.getElementById('tableNumber').value.trim();
+if(s==='طاولة'){g.style.display='';document.getElementById('optionSummary').textContent=t?'طاولة رقم '+t:s;currentTableNumber=t||null;}
+else{g.style.display='none';document.getElementById('optionSummary').textContent=s;currentTableNumber=null;}
+renderPrintReceipt();
+}
+function nextSeq(key,start){
+try{let s=parseInt(localStorage.getItem(key),10);if(isNaN(s))s=start;s+=1;localStorage.setItem(key,String(s));return String(s);}
+catch(e){return String(start+1);}
+}
+let invoiceNo=nextSeq('basta_invoice_seq',0);
+let orderNo=nextSeq('basta_order_seq',19288);
+
+function startNewInvoice(){
+if(currentTableNumber){
+const st=getTableStates();
+delete st[currentTableNumber];
+saveTableStates(st);
+clearTableSession(currentTableNumber);
+}
+orders.forEach(o=>{o.qty=0;o.options='';});
+const ti=document.getElementById('tableNumber');if(ti)ti.value='';
+const ni=document.getElementById('orderNotes');if(ni)ni.value='';
+const si=document.getElementById('serviceType');if(si)si.value='طاولة';
+invoiceNo=nextSeq('basta_invoice_seq',parseInt(invoiceNo,10));
+orderNo=nextSeq('basta_order_seq',parseInt(orderNo,10));
+fbSaveCounters(invoiceNo,orderNo,null);
+currentTableNumber=null;
+resetZeroQtyFilter();
+updateOrderOptions();
+renderTable();
+switchToTablesPage();
+}
+let isReprinting=false;
+window.addEventListener('afterprint',function(){
+if(isReprinting){isReprinting=false;renderPrintReceipt();return;}
+startNewInvoice();
+});
+function renderPrintReceipt(){
+const box=document.getElementById('printReceipt');if(!box)return;
+const active=orders.filter(o=>o.qty>0);
+const service=document.getElementById('serviceType')?document.getElementById('serviceType').value:'';
+const tn=document.getElementById('tableNumber')?document.getElementById('tableNumber').value.trim():'';
+const notes=document.getElementById('orderNotes')?document.getElementById('orderNotes').value.trim():'';
+let gt=0,tq=0;active.forEach(o=>{gt+=o.price*o.qty;tq+=o.qty});
+const vatR=0.15;const sub=gt/(1+vatR);const vat=gt-sub;
+const now=new Date();
+const ds=String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+const ts=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+let items='';
+active.forEach(o=>{
+const lt=(o.price*o.qty).toFixed(2);
+const sz=(o.size==='كبير')?o.size:'';
+const sp=[o.options,sz].filter(Boolean).join(' · ');
+items+='<div class="r-item"><div class="r-item-name-line">'+o.name+'</div>'+(sp?'<div class="r-item-options-line">'+sp+'</div>':'')+'<div class="r-row r-item-sub"><span class="r-right">'+o.qty+' × '+o.price.toFixed(2)+' ر.س</span><span class="r-left">'+lt+' ر.س</span></div></div>';
+});
+if(!items)items='<div class="r-item r-center">لا توجد أصناف</div>';
+box.innerHTML='<div class="r-center r-logo">بسطة شوي</div>'+
+'<div class="r-center r-sub">القطيف - حي الروضة - شارع الحسين بن علي</div>'+
+'<div class="r-center r-sub">لتجهيز الطلبات: / 0507296282</div>'+
+'<div class="r-center r-sub">رقم الضريبة: 311308159100003</div>'+
+'<div class="r-center r-doc-title">فاتورة ضريبية مبسطة</div>'+
+'<div class="r-divider"></div>'+
+'<div class="r-row r-meta-row"><span class="r-right">رقم الفاتورة</span><span class="r-left">'+invoiceNo+'</span></div>'+
+'<div class="r-row r-meta-row"><span class="r-right">التاريخ والوقت</span><span class="r-left">'+ts+' '+ds+'</span></div>'+
+'<div class="r-row r-meta-row"><span class="r-right">رقم الطلب</span><span class="r-left">'+orderNo+'</span></div>'+
+'<div class="r-divider"></div>'+
+'<div class="r-options-row">'+service+(service==='طاولة'&&tn?' رقم '+tn:'')+'</div>'+
+'<div class="r-divider"></div>'+
+(notes?'<div class="r-options-row">ملاحظة: '+notes+'</div><div class="r-divider"></div>':'')+
+items+
+'<div class="r-divider"></div>'+
+'<div class="r-row r-count-row"><span class="r-right">عدد الأصناف</span><span class="r-left">'+tq+'</span></div>'+
+'<div class="r-divider"></div>'+
+'<div class="r-row r-meta-row"><span class="r-right">الإجمالي الفرعي</span><span class="r-left">'+sub.toFixed(2)+' ر.س</span></div>'+
+'<div class="r-row r-meta-row"><span class="r-right">ضريبة القيمة المضافة 15%</span><span class="r-left">'+vat.toFixed(2)+' ر.س</span></div>'+
+'<div class="r-row r-total-row"><span class="r-right">الإجمالي شامل الضريبة</span><span class="r-left">'+gt.toFixed(2)+' ر.س</span></div>'+
+'<div class="r-divider"></div>'+
+'<div class="r-qrcode" id="r-qrcode"></div>'+
+'<div class="r-footer"><div>شكراً لطلبكم</div><div>بسطة شوي</div></div>';
+const qrData=buildZatcaQrData(SELLER_NAME,SELLER_VAT_NUMBER,now.toISOString(),gt,vat);
+renderZatcaQrCode('r-qrcode',qrData);
+}
+function openModal(){
+document.getElementById('addModal').classList.add('active');
+document.getElementById('itemNameInput').value='';
+document.getElementById('itemDescInput').value='';
+document.getElementById('itemPriceInput').value='';
+document.getElementById('itemQtyInput').value='0';
+document.getElementById('itemOptionsInput').value='';
+document.getElementById('itemSizeInput').value='متوسط';
+setTimeout(()=>document.getElementById('itemNameInput').focus(),100);
+}
+function closeModal(){document.getElementById('addModal').classList.remove('active');}
+['addModal','heldModal','closingModal','statsModal','splitModal','invoicesModal','invoicePreviewModal','qtyKeypadModal','itemManageModal'].forEach(id=>{
+const el=document.getElementById(id);
+if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('active');});
+});
+document.addEventListener('keydown',function(e){
+if(e.key==='Escape'){closeModal();closeHeldModal();closeClosingModal();closeStatsModal();closeSplitModal();closeInvoicesModal();closeInvoicePreviewModal();closeQtyKeypad();closeItemManageModal();}
+});
+function addOrder(){
+const name=document.getElementById('itemNameInput').value.trim();
+const desc=document.getElementById('itemDescInput').value.trim()||'بدون وصف';
+const price=parseFloat(document.getElementById('itemPriceInput').value);
+const qty=parseInt(document.getElementById('itemQtyInput').value)||0;
+const options=document.getElementById('itemOptionsInput').value.trim()||'';
+const size=document.getElementById('itemSizeInput').value;
+if(!name){alert('⚠️ أدخل اسم الصنف');return;}
+if(isNaN(price)||price<0){alert('⚠️ أدخل سعر صحيح');return;}
+orders.push({name,desc,price,qty,options,size,category:'skewers'});
+if(qty>0&&currentTableNumber)ensureTableSessionStarted(currentTableNumber);
+renderTable();
+if(typeof fbSaveMenuItems==='function')fbSaveMenuItems(orders);
+closeModal();
+showNotification('✅ تم إضافة "'+name+'"','success');
+}
+let editingItemIndex=null;
+function populateItemManageSelect(si){
+const s=document.getElementById('mgmtSelectInput');
+let h='<option value="">-- صنف جديد --</option>';
+orders.forEach((o,i)=>{h+='<option value="'+i+'">'+o.name+'</option>'});
+s.innerHTML=h;
+s.value=(si===null||si===undefined)?'':String(si);
+}
+function fillItemManageFormBlank(){
+document.getElementById('itemManageTitle').innerHTML='<i class="fas fa-plus-circle"></i> إضافة صنف جديد';
+document.getElementById('mgmtNameInput').value='';
+document.getElementById('mgmtDescInput').value='';
+document.getElementById('mgmtPriceInput').value='';
+document.getElementById('mgmtSizeInput').value='متوسط';
+document.getElementById('mgmtCategoryInput').value='skewers';
+document.getElementById('mgmtDeleteBtn').style.display='none';
+}
+function fillItemManageFormFromItem(item){
+document.getElementById('itemManageTitle').innerHTML='<i class="fas fa-pen"></i> تعديل الصنف';
+document.getElementById('mgmtNameInput').value=item.name;
+document.getElementById('mgmtDescInput').value=item.desc||'';
+document.getElementById('mgmtPriceInput').value=item.price;
+document.getElementById('mgmtSizeInput').value=item.size||'متوسط';
+document.getElementById('mgmtCategoryInput').value=item.category||'skewers';
+document.getElementById('mgmtDeleteBtn').style.display='';
+}
+function openItemManageModal(){
+editingItemIndex=null;
+populateItemManageSelect(null);
+fillItemManageFormBlank();
+document.getElementById('itemManageModal').classList.add('active');
+}
+function onItemManageSelectChange(v){
+if(v===''){editingItemIndex=null;fillItemManageFormBlank();return;}
+const i=parseInt(v,10);const item=orders[i];if(!item)return;
+editingItemIndex=i;fillItemManageFormFromItem(item);
+}
+function closeItemManageModal(){document.getElementById('itemManageModal').classList.remove('active');editingItemIndex=null;}
+function saveItemManage(){
+const name=document.getElementById('mgmtNameInput').value.trim();
+const desc=document.getElementById('mgmtDescInput').value.trim()||'بدون وصف';
+const price=parseFloat(document.getElementById('mgmtPriceInput').value);
+const size=document.getElementById('mgmtSizeInput').value;
+const category=document.getElementById('mgmtCategoryInput').value;
+if(!name){alert('⚠️ أدخل اسم');return;}
+if(isNaN(price)||price<0){alert('⚠️ سعر صحيح');return;}
+if(editingItemIndex!==null&&orders[editingItemIndex]){
+const item=orders[editingItemIndex];
+item.name=name;item.desc=desc;item.price=price;item.size=size;item.category=category;
+renderTable();
+if(typeof fbSaveMenuItems==='function')fbSaveMenuItems(orders);
+closeItemManageModal();
+showNotification('✅ تم تحديث "'+name+'"','success');
+}else{
+orders.push({name,desc,price,qty:0,options:'',size,category});
+renderTable();
+if(typeof fbSaveMenuItems==='function')fbSaveMenuItems(orders);
+closeItemManageModal();
+showNotification('✅ تم إضافة "'+name+'"','success');
+}
+}
+function deleteItemFromManageModal(){
+if(editingItemIndex===null||!orders[editingItemIndex])return;
+const name=orders[editingItemIndex].name;
+if(!confirm('حذف "'+name+'"؟'))return;
+orders.splice(editingItemIndex,1);
+renderTable();
+if(typeof fbSaveMenuItems==='function')fbSaveMenuItems(orders);
+closeItemManageModal();
+}
+function loadJSON(key,fb){
+try{const r=localStorage.getItem(key);if(!r)return fb;const p=JSON.parse(r);return Array.isArray(p)?p:fb;}
+catch(e){return fb;}
+}
+function saveJSON(key,v){try{localStorage.setItem(key,JSON.stringify(v))}catch(e){}}
+const SALES_LOG_KEY='basta_sales_log';
+const HELD_KEY='basta_held_invoices';
+const CLOSINGS_KEY='basta_closings';
+function getSalesLog(){return loadJSON(SALES_LOG_KEY,[]);}
+function saveSalesLog(l){saveJSON(SALES_LOG_KEY,l);if(typeof fbSaveSalesLog==='function')fbSaveSalesLog(l);}
+function getHeldInvoices(){return loadJSON(HELD_KEY,[]);}
+function saveHeldInvoices(l){saveJSON(HELD_KEY,l);renderHeldBadge();if(typeof fbSaveHeldInvoices==='function')fbSaveHeldInvoices(l);}
+function getClosings(){return loadJSON(CLOSINGS_KEY,[]);}
+function saveClosings(l){saveJSON(CLOSINGS_KEY,l);if(typeof fbSaveClosings==='function')fbSaveClosings(l);}
+function makeId(){return Date.now()+'-'+Math.random().toString(36).slice(2,8);}
+function logSale(){
+const active=orders.filter(o=>o.qty>0);if(active.length===0)return;
+let t=0,tq=0;active.forEach(o=>{t+=o.price*o.qty;tq+=o.qty});
+const vatR=0.15;const sub=t/(1+vatR);const vat=t-sub;
+const service=document.getElementById('serviceType').value;
+const tn=document.getElementById('tableNumber').value.trim();
+const notes=document.getElementById('orderNotes').value.trim();
+const log=getSalesLog();
+log.push({id:makeId(),invoiceNo,orderNo,dateTime:new Date().toISOString(),service,tableNumber:tn,notes,itemsCount:active.length,totalQty:tq,subtotal:+sub.toFixed(2),vat:+vat.toFixed(2),total:+t.toFixed(2),closingId:null,items:active.map(o=>({name:o.name,qty:o.qty,price:o.price,total:+(o.price*o.qty).toFixed(2),options:o.options||'',size:o.size||''}))});
+saveSalesLog(log);
+}
+function printReceiptNow(){
+const active=orders.filter(o=>o.qty>0);
+if(active.length===0){alert('⚠️ لا توجد أصناف');return;}
+logSale();
+window.print();
+}
+function closeInvoiceWithoutPrint(){
+const active=orders.filter(o=>o.qty>0);
+if(active.length===0){alert('⚠️ لا توجد أصناف');return;}
+if(!confirm('إغلاق الفاتورة بدون طباعة؟'))return;
+logSale();
+startNewInvoice();
+showNotification('✅ تم إغلاق الفاتورة','success');
+}
+function holdInvoice(){
+const active=orders.filter(o=>o.qty>0);
+if(active.length===0){alert('⚠️ لا توجد أصناف');return;}
+let t=0;active.forEach(o=>t+=o.price*o.qty);
+const notes=document.getElementById('orderNotes').value.trim();
+if(currentTableNumber){
+const st=getTableStates();
+st[currentTableNumber]={orders:JSON.parse(JSON.stringify(active)),notes,invoiceNo,orderNo,total:+t.toFixed(2),updatedAt:new Date().toISOString()};
+saveTableStates(st);
+orders.forEach(o=>{o.qty=0;o.options='';});
+document.getElementById('tableNumber').value='';
+document.getElementById('orderNotes').value='';
+invoiceNo=nextSeq('basta_invoice_seq',parseInt(invoiceNo,10));
+orderNo=nextSeq('basta_order_seq',parseInt(orderNo,10));
+fbSaveCounters(invoiceNo,orderNo,null);
+resetZeroQtyFilter();
+updateOrderOptions();
+renderTable();
+switchToTablesPage();
+showNotification('✅ تم تعليق فاتورة الطاولة','success');
+}else{
+const service=document.getElementById('serviceType').value;
+const tn=document.getElementById('tableNumber').value.trim();
+const held=getHeldInvoices();
+held.push({id:makeId(),savedAt:new Date().toISOString(),invoiceNo,orderNo,service,tableNumber:tn,notes,orders:JSON.parse(JSON.stringify(active)),total:+t.toFixed(2)});
+saveHeldInvoices(held);
+orders.forEach(o=>{o.qty=0;o.options='';});
+document.getElementById('orderNotes').value='';
+invoiceNo=nextSeq('basta_invoice_seq',parseInt(invoiceNo,10));
+orderNo=nextSeq('basta_order_seq',parseInt(orderNo,10));
+fbSaveCounters(invoiceNo,orderNo,null);
+resetZeroQtyFilter();
+updateOrderOptions();
+renderTable();
+switchToTablesPage();
+showNotification('✅ تم تعليق الفاتورة','success');
+}
+}
+function renderHeldBadge(){
+const held=getHeldInvoices();
+const b=document.getElementById('heldCountBadge');if(!b)return;
+if(held.length>0){b.style.display='inline-block';b.textContent=held.length;}
+else{b.style.display='none';}
+}
+function openHeldModal(){renderHeldList();document.getElementById('heldModal').classList.add('active');}
+function closeHeldModal(){document.getElementById('heldModal').classList.remove('active');}
+function renderHeldList(){
+const w=document.getElementById('heldListWrap');
+const held=getHeldInvoices().slice().sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
+if(held.length===0){w.innerHTML='<div class="empty-state">لا توجد فواتير معلقة</div>';return;}
+w.innerHTML=held.map(h=>{
+const d=new Date(h.savedAt);
+const ts=d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+const ds=d.toLocaleDateString('ar-SA');
+const sl=h.service+(h.service==='طاولة'&&h.tableNumber?' رقم '+h.tableNumber:'');
+return '<div class="held-item"><div class="held-item-info"><span class="held-item-title">فاتورة #'+h.invoiceNo+' · '+sl+'</span><span class="held-item-meta"><i class="fas fa-clock"></i> '+ts+' - '+ds+' · '+h.orders.length+' صنف</span><span class="held-item-total">'+h.total.toFixed(2)+' ر.س</span></div><div class="held-item-actions"><button class="btn btn-success" onclick="recallHeldInvoice(\''+h.id+'\')"><i class="fas fa-undo"></i> استرجاع</button><button class="btn btn-danger" onclick="deleteHeldInvoice(\''+h.id+'\')"><i class="fas fa-trash"></i></button></div></div>';
+}).join('');
+}
+function recallHeldInvoice(id){
+const held=getHeldInvoices();
+const idx=held.findIndex(h=>h.id===id);if(idx===-1)return;
+const h=held[idx];
+const cur=orders.filter(o=>o.qty>0);
+if(cur.length>0&&!confirm('استبدال الفاتورة الحالية؟'))return;
+orders.forEach(o=>{o.qty=0;o.options='';});
+h.orders.forEach(s=>{
+let ex=orders.find(o=>o.name===s.name);
+if(ex){ex.qty=s.qty;ex.options=s.options;ex.size=s.size;}
+else orders.push({...s});
+});
+document.getElementById('serviceType').value=h.service||'طاولة';
+document.getElementById('tableNumber').value=h.tableNumber||'';
+document.getElementById('orderNotes').value=h.notes||'';
+invoiceNo=h.invoiceNo;orderNo=h.orderNo;
+held.splice(idx,1);
+saveHeldInvoices(held);
+updateOrderOptions();
+renderTable();
+closeHeldModal();
+switchToOrdersPage();
+showNotification('✅ تم استرجاع الفاتورة','success');
+}
+function deleteHeldInvoice(id){
+if(!confirm('حذف هذه الفاتورة؟'))return;
+let held=getHeldInvoices();
+held=held.filter(h=>h.id!==id);
+saveHeldInvoices(held);
+renderHeldList();
+}
+function getOpenSales(){return getSalesLog().filter(e=>!e.closingId);}
+function openClosingModal(){renderClosingSummary();renderClosingHistory();document.getElementById('closingModal').classList.add('active');}
+function closeClosingModal(){document.getElementById('closingModal').classList.remove('active');}
+function renderClosingSummary(){
+const w=document.getElementById('closingSummaryWrap');
+const os=getOpenSales();
+if(os.length===0){w.innerHTML='<div class="empty-state">لا توجد مبيعات جديدة</div>';return;}
+let sub=0,vat=0,t=0,tb=0;
+os.forEach(e=>{sub+=e.subtotal;vat+=e.vat;t+=e.total;if(e.service==='طاولة')tb++;});
+w.innerHTML='<div class="summary-box"><div class="summary-line"><span>عدد الفواتير</span><span>'+os.length+'</span></div><div class="summary-line"><span>عدد الطاولات</span><span>'+tb+'</span></div><div class="summary-line"><span>الإجمالي الفرعي</span><span>'+sub.toFixed(2)+' ر.س</span></div><div class="summary-line"><span>الضريبة</span><span>'+vat.toFixed(2)+' ر.س</span></div><div class="summary-line"><span>الإجمالي</span><span>'+t.toFixed(2)+' ر.س</span></div></div>';
+}
+function renderClosingHistory(){
+const w=document.getElementById('closingHistoryWrap');
+const cl=getClosings().slice().sort((a,b)=>new Date(b.closedAt)-new Date(a.closedAt)).slice(0,10);
+if(cl.length===0){w.innerHTML='';return;}
+w.innerHTML='<div class="stats-section-title"><i class="fas fa-history"></i> آخر عمليات الإغلاق</div>'+cl.map(c=>'<div style="font-size:.82rem;color:#7a5f4b;padding:6px 0;border-bottom:1px dashed #e3d7cc;display:flex;justify-content:space-between"><span>'+new Date(c.closedAt).toLocaleString('ar-SA')+' · '+c.invoiceCount+' فاتورة</span><span style="font-weight:700">'+c.total.toFixed(2)+' ر.س</span></div>').join('');
+}
+function confirmClosing(){
+const os=getOpenSales();
+if(os.length===0){alert('ℹ️ لا توجد مبيعات');return;}
+if(!confirm('إغلاق '+os.length+' فاتورة؟'))return;
+const cid=makeId();
+let sub=0,vat=0,t=0,tb=0;
+os.forEach(e=>{sub+=e.subtotal;vat+=e.vat;t+=e.total;if(e.service==='طاولة')tb++;});
+const cl=getClosings();
+cl.push({id:cid,closedAt:new Date().toISOString(),invoiceCount:os.length,tablesCount:tb,subtotal:+sub.toFixed(2),vat:+vat.toFixed(2),total:+t.toFixed(2)});
+saveClosings(cl);
+const ids=new Set(os.map(e=>e.id));
+const log=getSalesLog();
+log.forEach(e=>{if(ids.has(e.id))e.closingId=cid;});
+saveSalesLog(log);
+renderClosingSummary();
+renderClosingHistory();
+showNotification('✅ تم إغلاق اليومية','success');
+}
+function openStatsModal(){renderStats();document.getElementById('statsModal').classList.add('active');}
+function closeStatsModal(){document.getElementById('statsModal').classList.remove('active');}
+function renderStats(){
+const w=document.getElementById('statsWrap');
+const log=getSalesLog();
+if(log.length===0){w.innerHTML='<div class="empty-state">لا توجد بيانات</div>';return;}
+const dm={},mm={};
+log.forEach(e=>{
+const d=new Date(e.dateTime);
+const dk=d.toLocaleDateString('en-CA');
+const mk=dk.slice(0,7);
+if(!dm[dk])dm[dk]={count:0,tables:0,total:0};
+dm[dk].count++;if(e.service==='طاولة')dm[dk].tables++;dm[dk].total+=e.total;
+if(!mm[mk])mm[mk]={count:0,tables:0,total:0};
+mm[mk].count++;if(e.service==='طاولة')mm[mk].tables++;mm[mk].total+=e.total;
+});
+const dr=Object.keys(dm).sort((a,b)=>b.localeCompare(a)).map(k=>'<tr><td>'+k+'</td><td>'+dm[k].tables+'</td><td>'+dm[k].count+'</td><td style="font-weight:700;color:#1f5a3a">'+dm[k].total.toFixed(2)+' ر.س</td></tr>').join('');
+const mr=Object.keys(mm).sort((a,b)=>b.localeCompare(a)).map(k=>'<tr><td>'+k+'</td><td>'+mm[k].tables+'</td><td>'+mm[k].count+'</td><td style="font-weight:700;color:#1f5a3a">'+mm[k].total.toFixed(2)+' ر.س</td></tr>').join('');
+w.innerHTML='<div class="stats-section-title"><i class="fas fa-calendar-day"></i> يومية</div><table class="stats-table"><thead><tr><th>التاريخ</th><th>الطاولات</th><th>الفواتير</th><th>المبلغ</th></tr></thead><tbody>'+dr+'</tbody></table><div class="stats-section-title"><i class="fas fa-calendar-alt"></i> شهرية</div><table class="stats-table"><thead><tr><th>الشهر</th><th>الطاولات</th><th>الفواتير</th><th>المبلغ</th></tr></thead><tbody>'+mr+'</tbody></table>';
+}
+const TABLE_STATES_KEY='basta_table_orders';
+const TABLE_SESSIONS_KEY='basta_table_sessions';
+function getTableStates(){
+try{const r=localStorage.getItem(TABLE_STATES_KEY);return r?JSON.parse(r):{};}
+catch(e){return{};}
+}
+function saveTableStates(s){
+try{localStorage.setItem(TABLE_STATES_KEY,JSON.stringify(s))}catch(e){}
+if(typeof fbSaveTableStates==='function')fbSaveTableStates(s);
+}
+function getTableSessions(){
+try{const r=localStorage.getItem(TABLE_SESSIONS_KEY);return r?JSON.parse(r):{};}
+catch(e){return{};}
+}
+function saveTableSessions(s){
+try{localStorage.setItem(TABLE_SESSIONS_KEY,JSON.stringify(s))}catch(e){}
+if(typeof fbSaveTableSessions==='function')fbSaveTableSessions(s);
+}
+function ensureTableSessionStarted(n){
+const s=getTableSessions();
+if(!s[n]){s[n]={openedAt:new Date().toISOString()};saveTableSessions(s);}
+}
+function clearTableSession(n){
+const s=getTableSessions();
+if(s[n]){delete s[n];saveTableSessions(s);}
+}
+function formatElapsed(oa){
+const diff=Date.now()-new Date(oa).getTime();
+const ts=Math.max(0,Math.floor(diff/1000));
+const h=Math.floor(ts/3600);const m=Math.floor((ts%3600)/60);const s=ts%60;
+const p=v=>String(v).padStart(2,'0');
+return h>0?h+':'+p(m)+':'+p(s):p(m)+':'+p(s);
+}
+function switchToTablesPage(){
+document.getElementById('tablesPage').style.display='';
+document.getElementById('ordersPage').style.display='none';
+document.getElementById('reservationsPage').style.display='none';
+document.getElementById('navTablesBtn').classList.add('active');
+document.getElementById('navOrdersBtn').classList.remove('active');
+document.getElementById('navReservationsBtn').classList.remove('active');
+renderTablesGrid();
+}
+function switchToOrdersPage(){
+document.getElementById('tablesPage').style.display='none';
+document.getElementById('ordersPage').style.display='';
+document.getElementById('reservationsPage').style.display='none';
+document.getElementById('navOrdersBtn').classList.add('active');
+document.getElementById('navTablesBtn').classList.remove('active');
+document.getElementById('navReservationsBtn').classList.remove('active');
+}
+function switchToReservationsPage(){
+document.getElementById('tablesPage').style.display='none';
+document.getElementById('ordersPage').style.display='none';
+document.getElementById('reservationsPage').style.display='';
+document.getElementById('navReservationsBtn').classList.add('active');
+document.getElementById('navTablesBtn').classList.remove('active');
+document.getElementById('navOrdersBtn').classList.remove('active');
+populateReservationTableSelect();
+setReservationDefaultDateTime();
+renderReservationsList();
+}
+function setReservationDefaultDateTime(){
+const di=document.getElementById('resDateInput');
+const ti=document.getElementById('resTimeInput');
+if(!di||!ti)return;
+const n=new Date();
+di.value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+ti.value=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+}
+function renderTablesGrid(){
+const g=document.getElementById('tablesGrid');if(!g)return;
+const st=getTableStates();
+const ss=getTableSessions();
+let h='';
+for(let i=1;i<=TABLE_COUNT;i++){
+const s=st[i];const se=ss[i];const occ=!!s;
+h+='<div class="table-card '+(occ?'occupied':'available')+'" onclick="enterTable('+i+')"><i class="fas fa-chair table-card-icon"></i><span class="table-card-num">طاولة '+i+'</span><span class="table-card-status">'+(occ?s.orders.length+' صنف · '+s.total.toFixed(2)+' ر.س':'فاضية')+'</span>'+(se?'<span class="table-card-timer" id="tableTimer-'+i+'"><i class="fas fa-stopwatch"></i> '+formatElapsed(se.openedAt)+'</span>':'')+'</div>';
+}
+g.innerHTML=h;
+}
+function updateTableTimers(){
+const ss=getTableSessions();
+for(let i=1;i<=TABLE_COUNT;i++){
+const el=document.getElementById('tableTimer-'+i);
+if(!el)continue;
+const s=ss[i];if(!s)continue;
+el.innerHTML='<i class="fas fa-stopwatch"></i> '+formatElapsed(s.openedAt);
+}
+}
+setInterval(updateTableTimers,1000);
+function enterTable(n){
+const active=orders.filter(o=>o.qty>0);
+if(active.length>0&&String(currentTableNumber)!==String(n)){
+if(!confirm('يوجد طلب حالي غير محفوظ. متابعة؟'))return;
+}
+const st=getTableStates();
+const s=st[n];
+if(s)ensureTableSessionStarted(n);
+orders.forEach(o=>{o.qty=0;o.options='';});
+if(s){
+s.orders.forEach(sv=>{
+let ex=orders.find(o=>o.name===sv.name);
+if(ex){ex.qty=sv.qty;ex.options=sv.options;ex.size=sv.size;}
+else orders.push({...sv});
+});
+invoiceNo=s.invoiceNo;orderNo=s.orderNo;
+}
+document.getElementById('serviceType').value='طاولة';
+document.getElementById('tableNumber').value=n;
+document.getElementById('orderNotes').value=s?(s.notes||''):'';
+resetZeroQtyFilter();
+updateOrderOptions();
+renderTable();
+switchToOrdersPage();
+}
+function openInvoicesModal(){
+document.getElementById('invoiceSearchInput').value='';
+renderInvoicesList();
+document.getElementById('invoicesModal').classList.add('active');
+}
+function closeInvoicesModal(){document.getElementById('invoicesModal').classList.remove('active');}
+function renderInvoicesList(){
+const w=document.getElementById('invoicesListWrap');
+const q=(document.getElementById('invoiceSearchInput').value||'').trim();
+let log=getSalesLog().slice().sort((a,b)=>new Date(b.dateTime)-new Date(a.dateTime));
+if(q)log=log.filter(e=>String(e.invoiceNo).includes(q)||String(e.orderNo).includes(q));
+log=log.slice(0,60);
+if(log.length===0){w.innerHTML='<div class="empty-state">لا توجد فواتير</div>';return;}
+w.innerHTML=log.map(e=>{
+const d=new Date(e.dateTime);
+const ts=d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+const ds=d.toLocaleDateString('ar-SA');
+const sl=e.service+(e.service==='طاولة'&&e.tableNumber?' رقم '+e.tableNumber:'');
+return '<div class="invoice-row"><div class="invoice-row-info"><span class="invoice-row-title">فاتورة #'+e.invoiceNo+' · '+sl+'</span><span class="invoice-row-meta"><i class="fas fa-clock"></i> '+ts+' - '+ds+' · '+e.itemsCount+' صنف</span><span class="invoice-row-total">'+e.total.toFixed(2)+' ر.س</span></div><div class="invoice-row-actions"><button class="btn btn-outline" onclick="previewInvoice(\''+e.id+'\')"><i class="fas fa-eye"></i> معاينة</button><button class="btn btn-primary" onclick="reprintInvoice(\''+e.id+'\')"><i class="fas fa-print"></i> طباعة</button></div></div>';
+}).join('');
+}
+function findSaleById(id){return getSalesLog().find(e=>e.id===id);}
+function previewInvoice(id){
+const s=findSaleById(id);if(!s)return;
+const d=new Date(s.dateTime);
+const ds=d.toLocaleDateString('ar-SA');
+const ts=d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+const sl=s.service+(s.service==='طاولة'&&s.tableNumber?' رقم '+s.tableNumber:'');
+let items=(s.items||[]).map(it=>{
+const sp=[it.options,(it.size==='كبير'?it.size:'')].filter(Boolean).join(' · ');
+return '<div class="ip-item"><div class="ip-item-name">'+it.name+'</div>'+(sp?'<div style="font-size:.78rem;color:#8a7a6a">'+sp+'</div>':'')+'<div class="ip-row"><span>'+it.qty+' × '+it.price.toFixed(2)+' ر.س</span><span>'+it.total.toFixed(2)+' ر.س</span></div></div>';
+}).join('');
+document.getElementById('invoicePreviewWrap').innerHTML='<div class="ip-row"><span>رقم الفاتورة</span><span>'+s.invoiceNo+'</span></div><div class="ip-row"><span>رقم الطلب</span><span>'+s.orderNo+'</span></div><div class="ip-row"><span>التاريخ</span><span>'+ds+'</span></div><div class="ip-row"><span>الوقت</span><span>'+ts+'</span></div><div class="ip-row"><span>نوع الطلب</span><span>'+sl+'</span></div><div class="ip-divider"></div>'+items+'<div class="ip-divider"></div><div class="ip-row"><span>الإجمالي الفرعي</span><span>'+s.subtotal.toFixed(2)+' ر.س</span></div><div class="ip-row"><span>الضريبة</span><span>'+s.vat.toFixed(2)+' ر.س</span></div><div class="ip-row" style="font-weight:700;font-size:1rem"><span>الإجمالي</span><span>'+s.total.toFixed(2)+' ر.س</span></div>';
+document.getElementById('invoicePreviewPrintBtn').onclick=function(){reprintInvoice(id)};
+document.getElementById('invoicePreviewModal').classList.add('active');
+}
+function closeInvoicePreviewModal(){document.getElementById('invoicePreviewModal').classList.remove('active');}
+function buildReceiptHtmlFromSale(s){
+const d=new Date(s.dateTime);
+const ds=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+const ts=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+let items=(s.items||[]).map(o=>{
+const sp=[o.options,(o.size==='كبير'?o.size:'')].filter(Boolean).join(' · ');
+return '<div class="r-item"><div class="r-item-name-line">'+o.name+'</div>'+(sp?'<div class="r-item-options-line">'+sp+'</div>':'')+'<div class="r-row r-item-sub"><span class="r-right">'+o.qty+' × '+o.price.toFixed(2)+' ر.س</span><span class="r-left">'+o.total.toFixed(2)+' ر.س</span></div></div>';
+}).join('');
+if(!items)items='<div class="r-item r-center">لا توجد أصناف</div>';
+return '<div class="r-center r-logo">بسطة شوي</div><div class="r-center r-sub">رقم الضريبة: 311308159100003</div><div class="r-center r-doc-title">فاتورة ضريبية (نسخة)</div><div class="r-divider"></div><div class="r-row r-meta-row"><span class="r-right">رقم الفاتورة</span><span class="r-left">'+s.invoiceNo+'</span></div><div class="r-row r-meta-row"><span class="r-right">التاريخ</span><span class="r-left">'+ts+' '+ds+'</span></div><div class="r-divider"></div><div class="r-options-row">'+s.service+(s.service==='طاولة'&&s.tableNumber?' رقم '+s.tableNumber:'')+'</div><div class="r-divider"></div>'+items+'<div class="r-divider"></div><div class="r-row r-meta-row"><span class="r-right">الإجمالي الفرعي</span><span class="r-left">'+s.subtotal.toFixed(2)+' ر.س</span></div><div class="r-row r-meta-row"><span class="r-right">الضريبة 15%</span><span class="r-left">'+s.vat.toFixed(2)+' ر.س</span></div><div class="r-row r-total-row"><span class="r-right">الإجمالي</span><span class="r-left">'+s.total.toFixed(2)+' ر.س</span></div><div class="r-divider"></div><div class="r-qrcode" id="r-qrcode"></div><div class="r-footer"><div>نسخة معاد طباعتها</div></div>';
+}
+function reprintInvoice(id){
+const s=findSaleById(id);if(!s)return;
+if(!confirm('إعادة طباعة الفاتورة #'+s.invoiceNo+'؟'))return;
+isReprinting=true;
+document.getElementById('printReceipt').innerHTML=buildReceiptHtmlFromSale(s);
+const qrData=buildZatcaQrData(SELLER_NAME,SELLER_VAT_NUMBER,new Date(s.dateTime).toISOString(),s.total,s.vat);
+renderZatcaQrCode('r-qrcode',qrData);
+closeInvoicePreviewModal();
+closeInvoicesModal();
+window.print();
+}
+const RESERVATIONS_KEY='basta_reservations';
+const RES_SEQ_KEY='basta_res_seq';
+function getReservations(){return loadJSON(RESERVATIONS_KEY,[]);}
+function saveReservations(l){saveJSON(RESERVATIONS_KEY,l);if(typeof fbSaveReservations==='function')fbSaveReservations(l);}
+function nextResNo(){
+let c=parseInt(localStorage.getItem(RES_SEQ_KEY)||'0',10);
+c=c+1;
+try{localStorage.setItem(RES_SEQ_KEY,String(c))}catch(e){}
+return c;
+}
+function populateReservationTableSelect(){
+const s=document.getElementById('resTableInput');
+if(!s)return;
+const c=s.value;
+let h='<option value="">بدون تحديد</option>';
+for(let i=1;i<=TABLE_COUNT;i++)h+='<option value="'+i+'">طاولة '+i+'</option>';
+s.innerHTML=h;
+s.value=c;
+}
+function addReservation(){
+const name=document.getElementById('resNameInput').value.trim();
+const phone=document.getElementById('resPhoneInput').value.trim();
+const date=document.getElementById('resDateInput').value;
+const time=document.getElementById('resTimeInput').value;
+const guests=parseInt(document.getElementById('resGuestsInput').value,10)||1;
+const tn=document.getElementById('resTableInput').value;
+const notes=document.getElementById('resNotesInput').value.trim();
+if(!name){alert('⚠️ أدخل اسم الزبون');return;}
+if(!phone){alert('⚠️ أدخل رقم الجوال');return;}
+if(!date||!time){alert('⚠️ حدد التاريخ والوقت');return;}
+const list=getReservations();
+list.push({id:makeId(),resNo:nextResNo(),name,phone,date,time,guests,tableNumber:tn||null,notes,status:'upcoming',createdAt:new Date().toISOString()});
+saveReservations(list);
+document.getElementById('resNameInput').value='';
+document.getElementById('resPhoneInput').value='';
+document.getElementById('resGuestsInput').value='2';
+document.getElementById('resTableInput').value='';
+document.getElementById('resNotesInput').value='';
+setReservationDefaultDateTime();
+renderReservationsList();
+showNotification('✅ تم تسجيل الحجز #'+list[list.length-1].resNo,'success');
+}
+function renderReservationsList(){
+const w=document.getElementById('reservationsListWrap');
+if(!w)return;
+const list=getReservations().slice().sort((a,b)=>{
+if(a.status==='cancelled'&&b.status!=='cancelled')return 1;
+if(b.status==='cancelled'&&a.status!=='cancelled')return -1;
+const da=new Date(a.date+'T'+(a.time||'00:00'));
+const db=new Date(b.date+'T'+(b.time||'00:00'));
+return da-db;
+});
+if(list.length===0){w.innerHTML='<div class="empty-state">لا توجد حجوزات</div>';return;}
+const sl={upcoming:'قادم',arrived:'حضر',cancelled:'ملغي'};
+w.innerHTML=list.map(r=>{
+const dl=new Date(r.date+'T'+(r.time||'00:00')).toLocaleDateString('ar-SA');
+return '<div class="reservation-row status-'+r.status+'"><div class="reservation-row-info"><span class="reservation-row-title"><span class="reservation-res-no">#'+r.resNo+'</span> '+r.name+' <span class="reservation-status-badge '+r.status+'">'+sl[r.status]+'</span></span><span class="reservation-row-meta"><span><i class="fas fa-phone-alt"></i> '+r.phone+'</span><span><i class="fas fa-calendar-day"></i> '+dl+' - '+r.time+'</span><span><i class="fas fa-users"></i> '+r.guests+' أشخاص</span>'+(r.tableNumber?'<span><i class="fas fa-chair"></i> طاولة '+r.tableNumber+'</span>':'')+(r.notes?'<span><i class="fas fa-sticky-note"></i> '+r.notes+'</span>':'')+'</span></div><div class="reservation-row-actions">'+(r.status==='upcoming'?'<button class="btn btn-success" onclick="markReservationArrived(\''+r.id+'\')"><i class="fas fa-check"></i> حضر</button>':'')+(r.status==='upcoming'?'<button class="btn btn-warning" onclick="cancelReservation(\''+r.id+'\')"><i class="fas fa-ban"></i> إلغاء</button>':'')+(r.status!=='cancelled'?'<button class="btn btn-success" onclick="sendReservationWhatsapp(\''+r.id+'\')" style="background:#25D366;border-color:#1ebe5a"><i class="fab fa-whatsapp"></i> واتساب</button>':'')+(r.status==='arrived'&&r.tableNumber?'<button class="btn btn-primary" onclick="goToReservationTable(\''+r.id+'\')"><i class="fas fa-arrow-left"></i> دخول</button>':'')+'<button class="btn btn-danger" onclick="deleteReservation(\''+r.id+'\')"><i class="fas fa-trash"></i></button></div></div>';
+}).join('');
+}
+function isTableVacant(n){
+if(!n)return false;
+const s=getTableStates();
+return !s[n];
+}
+function formatPhoneForWhatsapp(p){
+let d=String(p).replace(/[^0-9]/g,'');
+if(d.startsWith('00'))d=d.slice(2);
+if(d.startsWith('0'))d='966'+d.slice(1);
+if(!d.startsWith('966'))d='966'+d;
+return d;
+}
+function sendReservationWhatsapp(id){
+const list=getReservations();
+const r=list.find(x=>x.id===id);if(!r)return;
+const wn=formatPhoneForWhatsapp(r.phone);
+const dl=new Date(r.date+'T'+(r.time||'00:00')).toLocaleDateString('ar-SA');
+let msg;
+if(r.tableNumber&&isTableVacant(r.tableNumber)){
+msg='مرحباً '+r.name+' 🌟\nطاولتكم رقم '+r.tableNumber+' جاهزة الآن في بسطة شوي.';
+}else{
+msg='مرحباً '+r.name+' 🌟\nتذكير بحجزكم في بسطة شوي بتاريخ '+dl+' الساعة '+r.time+(r.tableNumber?' (طاولة '+r.tableNumber+')':'')+'.';
+}
+window.open('https://wa.me/'+wn+'?text='+encodeURIComponent(msg),'_blank');
+}
+function markReservationArrived(id){
+const l=getReservations();
+const r=l.find(x=>x.id===id);if(!r)return;
+r.status='arrived';
+saveReservations(l);
+renderReservationsList();
+}
+function cancelReservation(id){
+if(!confirm('إلغاء هذا الحجز؟'))return;
+const l=getReservations();
+const r=l.find(x=>x.id===id);if(!r)return;
+r.status='cancelled';
+saveReservations(l);
+renderReservationsList();
+}
+function deleteReservation(id){
+if(!confirm('حذف الحجز؟'))return;
+let l=getReservations();
+l=l.filter(x=>x.id!==id);
+saveReservations(l);
+renderReservationsList();
+}
+function goToReservationTable(id){
+const l=getReservations();
+const r=l.find(x=>x.id===id);
+if(!r||!r.tableNumber)return;
+enterTable(parseInt(r.tableNumber,10));
+}
+document.addEventListener('DOMContentLoaded',function(){
+renderTable();
+updateOrderOptions();
+renderHeldBadge();
+switchToTablesPage();
+setTimeout(()=>{
+if(window.FB&&window.FB.ready){
+fbSaveMenuItems(orders);
+}
+},2000);
+});
+</script>
+</body>
+</html>
