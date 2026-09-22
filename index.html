@@ -56,6 +56,29 @@ body{background:#f5f0eb;min-height:100vh;padding:1.5rem 1rem;display:flex;flex-d
 .table-card.available{background:#f5ede6;border-color:#e3d7cc}
 .table-card.occupied{background:#fcf0ea;border-color:#c52a1a;box-shadow:0 8px 20px -6px rgba(197,42,26,.35)}
 .table-card-icon{font-size:2rem;color:#3a2c1c}
+    .table-card-reset {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    color: #c52a1a;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    z-index: 5;
+    transition: background 0.15s, color 0.15s;
+}
+.table-card-reset:hover {
+    background: #c52a1a;
+    color: #fff;
+}
 .table-card.occupied .table-card-icon{color:#c52a1a}
 .table-card-num{font-weight:800;font-size:1.2rem;color:#3a2c1c}
 .table-card-status{font-size:.85rem;color:#8a7a6a;text-align:center}
