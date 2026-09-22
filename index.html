@@ -1179,6 +1179,22 @@ const s=getTableSessions();
 if(!s[n]){s[n]={openedAt:new Date().toISOString()};saveTableSessions(s);}
 }
 function clearTableSession(n){
+    function resetTable(n, evt) {
+    if (evt) evt.stopPropagation();
+    if (!confirm(`هل تريد تصفير الطاولة ${n}؟ سيتم مسح طلبها الحالي وإيقاف عداد الوقت نهائياً.`)) {
+        return;
+    }
+    const tableStates = getTableStates();
+    delete tableStates[n];
+    saveTableStates(tableStates);
+    clearTableSession(n);
+
+    if (String(currentTableNumber) === String(n)) {
+        orders.forEach(o => { o.qty = 0; o.options = ''; });
+        renderTable();
+    }
+    renderTablesGrid();
+}
 const s=getTableSessions();
 if(s[n]){delete s[n];saveTableSessions(s);}
 }
@@ -1232,7 +1248,13 @@ const ss=getTableSessions();
 let h='';
 for(let i=1;i<=TABLE_COUNT;i++){
 const s=st[i];const se=ss[i];const occ=!!s;
-h+='<div class="table-card '+(occ?'occupied':'available')+'" onclick="enterTable('+i+')"><i class="fas fa-chair table-card-icon"></i><span class="table-card-num">طاولة '+i+'</span><span class="table-card-status">'+(occ?s.orders.length+' صنف · '+s.total.toFixed(2)+' ر.س':'فاضية')+'</span>'+(se?'<span class="table-card-timer" id="tableTimer-'+i+'"><i class="fas fa-stopwatch"></i> '+formatElapsed(se.openedAt)+'</span>':'')+'</div>';
+h+='<div class="table-card '+(occ?'occupied':'available')+'" onclick="enterTable('+i+')">'+
+((occ||se)?'<button class="table-card-reset" title="تصفير الطاولة" onclick="resetTable('+i+', event)"><i class="fas fa-rotate-left"></i></button>':'')+
+'<i class="fas fa-chair table-card-icon"></i>'+
+'<span class="table-card-num">طاولة '+i+'</span>'+
+'<span class="table-card-status">'+(occ?s.orders.length+' صنف · '+s.total.toFixed(2)+' ر.س':'فاضية')+'</span>'+
+(se?'<span class="table-card-timer" id="tableTimer-'+i+'"><i class="fas fa-stopwatch"></i> '+formatElapsed(se.openedAt)+'</span>':'')+
+'</div>';
 }
 g.innerHTML=h;
 }
