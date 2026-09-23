@@ -516,6 +516,21 @@ function doLogout(){
     try{localStorage.removeItem('basta_auth');}catch(e){}
     location.reload();
 }
+    function doLogout(){
+    if(!confirm('تسجيل الخروج؟'))return;
+    try{localStorage.removeItem('basta_auth');}catch(e){}
+    location.reload();
+}                    ← نهاية doLogout
+
+/* 👇 أضف هذي الأسطر هنا (سطر جديد) */
+
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+window.isLoggedIn = isLoggedIn;
+
+/* 👆 نهاية الإضافة */
+
+document.addEventListener('keydown',function(e){    ← السطر اللي كان بعده
 document.addEventListener('keydown',function(e){
     if(e.key==='Enter'&&!document.getElementById('loginScreen').classList.contains('hidden')){
         doLogin();
