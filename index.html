@@ -264,7 +264,7 @@ html,body{width:80mm;background:white;padding:0;margin:0;display:block}
 <p class="sub">نظام إدارة الطلبات</p>
 <input type="text" id="loginUser" class="login-input" placeholder="اسم المستخدم" autocomplete="username" />
 <input type="password" id="loginPass" class="login-input" placeholder="كلمة المرور" autocomplete="current-password" />
-<button class="login-btn" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> دخول</button>
+<button class="login-btn" id="loginBtnElement"><i class="fas fa-sign-in-alt"></i> دخول</button>
 <div class="login-error" id="loginError"></div>
 <div class="login-footer">© بسطة شوي 2026</div>
 </div>
@@ -519,9 +519,10 @@ function doLogout(){
 
 /* 👇 أضف هذي الأسطر هنا (سطر جديد) */
 
-window.doLogin = doLogin;
-window.doLogout = doLogout;
-window.isLoggedIn = isLoggedIn;
+document.addEventListener('DOMContentLoaded', function(){
+    const loginBtn = document.getElementById('loginBtnElement');
+    if(loginBtn) loginBtn.addEventListener('click', doLogin);
+});
 
 /* 👆 نهاية الإضافة */
 
