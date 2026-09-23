@@ -350,7 +350,8 @@ html,body{width:80mm;background:white;padding:0;margin:0;display:block}
 <button class="btn btn-outline" onclick="openItemManageModal()"><i class="fas fa-edit"></i> إضافة / تعديل صنف</button>
 <button class="btn btn-danger" onclick="openClosingModal()"><i class="fas fa-lock"></i> إغلاق اليومية</button>
 <button class="btn btn-success" onclick="openStatsModal()"><i class="fas fa-chart-bar"></i> الإحصائيات</button>
-<button class="btn btn-outline" onclick="openInvoicesModal()"><i class="fas fa-history"></i> الفواتير السابقة</button>
+<button class="btn btn-outline" onclick="openInvoicesModal()"><i class="fas fa-history"></i> الفواتير السابقة</button>    
+<button class="btn" id="logoutBtn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> خروج</button>
 </div>
 </div>
 <div class="menu-grid-wrapper no-print">
@@ -483,6 +484,50 @@ html,body{width:80mm;background:white;padding:0;margin:0;display:block}
 </div>
 </div>
 <script>
+    const LOGIN_USER='admin';
+const LOGIN_PASS='123456';
+const LOGIN_DURATION=7*24*60*60*1000;
+
+function isLoggedIn(){
+    try{
+        const auth=JSON.parse(localStorage.getItem('basta_auth')||'null');
+        if(!auth)return false;
+        if(Date.now()-auth.time>LOGIN_DURATION)return false;
+        return auth.user===LOGIN_USER;
+    }catch(e){return false;}
+}
+function doLogin(){
+    const u=document.getElementById('loginUser').value.trim();
+    const p=document.getElementById('loginPass').value;
+    const err=document.getElementById('loginError');
+    if(!u||!p){err.textContent='⚠️ أدخل اسم المستخدم وكلمة المرور';return;}
+    if(u===LOGIN_USER&&p===LOGIN_PASS){
+        try{localStorage.setItem('basta_auth',JSON.stringify({user:u,time:Date.now()}));}catch(e){}
+        document.getElementById('loginScreen').classList.add('hidden');
+        err.textContent='';
+        showNotification('✅ مرحباً بك','success',2000);
+    }else{
+        err.textContent='❌ اسم المستخدم أو كلمة المرور خطأ';
+        document.getElementById('loginPass').value='';
+    }
+}
+function doLogout(){
+    if(!confirm('تسجيل الخروج؟'))return;
+    try{localStorage.removeItem('basta_auth');}catch(e){}
+    location.reload();
+}
+document.addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!document.getElementById('loginScreen').classList.contains('hidden')){
+        doLogin();
+    }
+});
+window.addEventListener('DOMContentLoaded',function(){
+    if(isLoggedIn()){
+        document.getElementById('loginScreen').classList.add('hidden');
+    }else{
+        setTimeout(()=>document.getElementById('loginUser').focus(),300);
+    }
+});
 const SELLER_NAME='بسطة شوي';
 const SELLER_VAT_NUMBER='311308159100003';
 function tlvField(tag,value){const v=new TextEncoder().encode(String(value));const f=new Uint8Array(2+v.length);f[0]=tag;f[1]=v.length;f.set(v,2);return f;}
