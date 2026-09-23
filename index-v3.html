@@ -1957,6 +1957,7 @@ const VOICE_PRINT_KEYWORDS = ['اطبع', 'اطبعها', 'طبع', 'طبعها'
 const VOICE_HOLD_KEYWORDS = ['علق', 'علقها', 'تعليق'];
 const VOICE_CLOSE_KEYWORDS = ['اغلق', 'اغلقها', 'اغلاق', 'قفل', 'قفلها', 'انهي', 'انهها', 'انهاء'];
 const VOICE_TABLE_WORD = 'طاوله';
+const VOICE_OPEN_TABLE_KEYWORDS = ['افتح', 'فتح', 'ادخل', 'دخل', 'روح', 'انتقل', 'اذهب', 'ودني', 'خذني'];
 
 function detectInvoiceCommand(words) {
     if (words.some(w => VOICE_PRINT_KEYWORDS.includes(w))) return 'print';
