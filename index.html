@@ -126,7 +126,25 @@ body{background:#f5f0eb;min-height:100vh;padding:1.5rem 1rem;display:flex;flex-d
 .menu-card .mc-name{display:block;font-weight:700;font-size:1.05rem;color:#2a2a2a;margin-bottom:.5rem}
 .menu-card .mc-price{display:block;font-size:1rem;font-weight:600;color:#1a6faf}
 .menu-card.active .mc-price{color:#4a3a1a}
-.menu-card .mc-badge{position:absolute;top:-14px;left:-14px;background:#c52a1a;color:#fff;font-size:1.5rem;font-weight:800;min-width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 8px;box-shadow:0 3px 8px rgba(0,0,0,.35);border:3px solid #fff;z-index:2}
+.menu-card .mc-badge {
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    background: #fff;
+    color: #000;
+    border: 2.5px solid #c52a1a;
+    font-size: 1.15rem;
+    font-weight: 800;
+    min-width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    z-index: 2;
+}
 .mc-options-input{width:100%;margin-top:.5rem;padding:4px 8px;font-size:.75rem;border:1px solid #d4c5b8;border-radius:6px;text-align:center;background:#fffdfa;color:#4a3a1a}
 .mc-options-input:focus{outline:none;border-color:#c52a1a}
 .mc-qty-control{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:.6rem}
