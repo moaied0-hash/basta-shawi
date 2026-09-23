@@ -93,7 +93,6 @@
         }
 
         .table-card {
-            position: relative;
             border-radius: 20px;
             padding: 1.6rem 1rem;
             display: flex;
@@ -103,30 +102,6 @@
             cursor: pointer;
             transition: transform 0.15s, box-shadow 0.15s;
             border: 2px solid transparent;
-        }
-
-        .table-card-reset {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: none;
-            background: #fff;
-            color: #c52a1a;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: background 0.15s, color 0.15s;
-        }
-
-        .table-card-reset:hover {
-            background: #c52a1a;
-            color: #fff;
         }
 
         .table-card:hover {
@@ -360,12 +335,30 @@
             color: #c52a1a;
         }
 
+        .order-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .order-meta span {
             font-weight: 700;
             background: #e6b325;
             color: #3a2c1c;
             padding: 2px 16px;
             border-radius: 40px;
+        }
+
+        /* رقم الطلب نفسه أكبر وأوضح من باقي البيانات (تاريخ/وقت) */
+        .order-meta-orderno #orderMetaNo {
+            font-size: 1.5em;
+            padding: 3px 20px;
+            background: #c52a1a;
+            color: #fff;
+        }
+
+        #orderMetaTime {
+            font-variant-numeric: tabular-nums;
         }
 
         .toolbar {
@@ -456,6 +449,75 @@
             border-radius: 40px;
             margin-right: 4px;
         }
+
+        /* ===== زر الكمية السريعة في شريط الأدوات ===== */
+        .qty-count-badge {
+            background: #e6b325;
+            color: #3a2c1c;
+            font-size: 0.8rem;
+            font-weight: 800;
+            padding: 1px 9px;
+            border-radius: 40px;
+            margin-right: 4px;
+        }
+
+        #globalQtyBtn.qty-armed {
+            background: #3a2c1c;
+            border-color: #3a2c1c;
+            color: white;
+        }
+
+        #globalQtyBtn.qty-armed .qty-count-badge {
+            background: #e6b325;
+            color: #3a2c1c;
+        }
+
+        /* ===== زر الطلب بالصوت ===== */
+        #voiceOrderBtn.voice-listening {
+            background: #c52a1a;
+            border-color: #c52a1a;
+            color: white;
+            animation: voicePulse 1.1s infinite;
+        }
+
+        @keyframes voicePulse {
+            0% { box-shadow: 0 0 0 0 rgba(197, 42, 26, 0.55); }
+            70% { box-shadow: 0 0 0 10px rgba(197, 42, 26, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(197, 42, 26, 0); }
+        }
+
+        /* ===== إشعار الطلب بالصوت (بديل عن alert المزعج) ===== */
+        #voiceToastWrap {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            pointer-events: none;
+            max-width: 92vw;
+        }
+        .voice-toast {
+            background: #2c2118;
+            color: #fff;
+            border-right: 4px solid #3fae55;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 14px;
+            line-height: 1.7;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+            white-space: pre-line;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: opacity .2s ease, transform .2s ease;
+            max-width: 420px;
+        }
+        .voice-toast.show { opacity: 1; transform: translateY(0); }
+        .voice-toast.warn { border-right-color: #e6b325; }
+        .voice-toast.err { border-right-color: #c52a1a; }
 
         .btn-add {
             background: #e6b325;
@@ -572,92 +634,22 @@
 
         .menu-card .mc-badge {
             position: absolute;
-            top: -12px;
-            left: -12px;
-            background: #fff;
-            color: #000;
-            border: 2.5px solid #c52a1a;
-            font-size: 1.15rem;
-            font-weight: 800;
-            min-width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 6px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.25);
-            z-index: 2;
-        }
-
-        /* ===== حاسبة الكمية ===== */
-        .mc-qty-control button.mc-calc {
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            border: none;
-            background: #3a2c1c;
+            top: -16px;
+            left: -16px;
+            background: #c52a1a;
             color: #fff;
-            font-size: 0.8rem;
+            font-size: 1.7rem;
+            font-weight: 800;
+            min-width: 46px;
+            height: 46px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        .mc-qty-control button.mc-calc:hover {
-            background: #2a2013;
-        }
-
-        .calc-display {
-            background: #faf6f0;
-            border: 2px solid #e3d7cc;
-            border-radius: 16px;
-            text-align: center;
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #3a2c1c;
-            padding: 0.8rem;
-            margin-bottom: 1.2rem;
-            letter-spacing: 1px;
-        }
-
-        .calc-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 1.4rem;
-        }
-
-        .calc-key {
-            background: #f5ede6;
-            border: 1px solid #e3d7cc;
-            border-radius: 14px;
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #3a2c1c;
-            padding: 0.9rem 0;
-            cursor: pointer;
-            transition: background 0.15s, transform 0.1s;
-        }
-
-        .calc-key:hover {
-            background: #e9dcc9;
-        }
-
-        .calc-key:active {
-            transform: scale(0.95);
-        }
-
-        .calc-key.calc-clear {
-            background: #f8d7da;
-            color: #842029;
-        }
-
-        .calc-key.calc-back {
-            background: #f0e6da;
-            color: #6f6152;
+            padding: 0 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+            border: 3px solid #fff;
+            z-index: 2;
         }
 
         .mc-options-input {
@@ -721,32 +713,84 @@
             cursor: not-allowed;
         }
 
-        .mc-qty-input {
+        .mc-qty-display {
             font-weight: 700;
-            font-size: 0.95rem;
-            width: 34px;
+            font-size: 0.9rem;
+            min-width: 44px;
+            height: 26px;
             text-align: center;
             color: #2a2a2a;
             border: 1px solid #d4c5b8;
             border-radius: 8px;
             background: white;
-            padding: 2px 0;
+            padding: 2px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: border 0.15s, background 0.15s;
         }
 
-        .mc-qty-input::-webkit-outer-spin-button,
-        .mc-qty-input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
+        .mc-qty-display i {
+            font-size: 0.7rem;
+            opacity: 0.6;
         }
 
-        .mc-qty-input:focus {
-            outline: none;
+        .mc-qty-display:hover {
             border-color: #c52a1a;
+            background: #fff8f5;
         }
 
-        .menu-card.active .mc-qty-input {
+        .menu-card.active .mc-qty-display {
             color: #4a3a1a;
             border-color: #c39a5f;
+        }
+
+        /* ===== لوحة أرقام إدخال الكمية ===== */
+        .keypad-display {
+            font-size: 2.2rem;
+            font-weight: 800;
+            text-align: center;
+            background: #f6efe8;
+            border: 1px solid #d4c5b8;
+            border-radius: 12px;
+            padding: 0.6rem;
+            margin-bottom: 1rem;
+            color: #2c1d14;
+            letter-spacing: 2px;
+            min-height: 3rem;
+        }
+
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .keypad-grid button {
+            font-size: 1.3rem;
+            font-weight: 700;
+            padding: 0.9rem 0;
+            border: 1px solid #d4c5b8;
+            border-radius: 12px;
+            background: #fefcf9;
+            color: #3a2c1c;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .keypad-grid button:hover {
+            background: #f0e4d8;
+        }
+
+        .keypad-grid button.keypad-clear {
+            color: #c52a1a;
+        }
+
+        .keypad-grid button.keypad-backspace {
+            color: #8a5a1a;
         }
 
         /* ===== ألوان تصنيف الأصناف ===== */
@@ -1579,9 +1623,9 @@
                 </div>
             </div>
             <div class="order-meta">
-                <i class="fas fa-receipt"></i> طلب #<span>2026-08-05</span>
-                <i class="fas fa-calendar-alt"></i> 05 أغسطس 2026
-                <i class="fas fa-clock"></i> 21:45
+                <span class="order-meta-item order-meta-orderno"><i class="fas fa-receipt"></i> طلب #<span id="orderMetaNo">0</span></span>
+                <span class="order-meta-item"><i class="fas fa-calendar-alt"></i> <span id="orderMetaDate">--</span></span>
+                <span class="order-meta-item"><i class="fas fa-clock"></i> <span id="orderMetaTime">--:--:--</span></span>
             </div>
         </div>
 
@@ -1618,6 +1662,13 @@
             <div class="btn-group no-print">
                 <button class="btn btn-add" onclick="openModal()">
                     <i class="fas fa-plus-circle"></i> إضافة طلب
+                </button>
+                <button class="btn btn-outline" id="globalQtyBtn" onclick="openGlobalQtyKeypad()" title="حدد كمية ثم اضغط على الصنف لإضافتها دفعة واحدة">
+                    <i class="fas fa-hashtag"></i> الكمية
+                    <span class="qty-count-badge" id="globalQtyBadge" style="display:none;"></span>
+                </button>
+                <button class="btn btn-outline" id="voiceOrderBtn" onclick="toggleVoiceOrder()" title="يشتغل تلقائياً بمجرد فتح صفحة الطلبات ويفضل يسمع طول الطلب. قل مثلاً: سيخ لحم اثنين وسيخ دجاج وحده. اضغط هنا لو تبي توقفه أو تشغّله يدوياً">
+                    <i class="fas fa-microphone"></i> <span id="voiceOrderBtnLabel">الطلب بالصوت</span>
                 </button>
                 <button class="btn btn-warning" id="hideZeroBtn" onclick="toggleHideZeroQty()">
                     <i class="fas fa-broom"></i> <span id="hideZeroBtnLabel">إخفاء الصفرية</span>
@@ -1796,6 +1847,34 @@
         </div>
     </div>
 
+    <!-- مودال لوحة أرقام الكمية -->
+    <div class="modal-overlay" id="qtyKeypadModal">
+        <div class="modal-box" style="max-width: 360px;">
+            <h2 id="keypadItemTitle"><i class="fas fa-calculator"></i> إدخال الكمية</h2>
+            <div class="keypad-display" id="keypadDisplay">0</div>
+            <div class="keypad-grid">
+                <button onclick="keypadPress('1')">1</button>
+                <button onclick="keypadPress('2')">2</button>
+                <button onclick="keypadPress('3')">3</button>
+                <button onclick="keypadPress('4')">4</button>
+                <button onclick="keypadPress('5')">5</button>
+                <button onclick="keypadPress('6')">6</button>
+                <button onclick="keypadPress('7')">7</button>
+                <button onclick="keypadPress('8')">8</button>
+                <button onclick="keypadPress('9')">9</button>
+                <button class="keypad-clear" onclick="keypadClear()">C</button>
+                <button onclick="keypadPress('0')">0</button>
+                <button class="keypad-backspace" onclick="keypadBackspace()"><i class="fas fa-backspace"></i></button>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeQtyKeypad()">إلغاء</button>
+                <button class="btn btn-primary" onclick="keypadConfirm()" style="flex:2;">
+                    <i class="fas fa-check"></i> تأكيد
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- مودال الفواتير المعلقة -->
     <div class="modal-overlay" id="heldModal">
         <div class="modal-box" style="max-width: 640px;">
@@ -1887,38 +1966,6 @@
         </div>
     </div>
 
-    <!-- مودال حاسبة الكمية -->
-    <div class="modal-overlay" id="qtyCalcModal">
-        <div class="modal-box" style="max-width: 380px;">
-            <h2><i class="fas fa-calculator"></i> إدخال الكمية</h2>
-            <p class="subtitle">اكتب العدد ثم اضغط "تطبيق" لإضافته للطلب</p>
-
-            <div class="calc-display" id="calcDisplayValue">0</div>
-
-            <div class="calc-grid">
-                <button type="button" class="calc-key" onclick="calcPress('3')">3</button>
-                <button type="button" class="calc-key" onclick="calcPress('2')">2</button>
-                <button type="button" class="calc-key" onclick="calcPress('1')">1</button>
-                <button type="button" class="calc-key" onclick="calcPress('6')">6</button>
-                <button type="button" class="calc-key" onclick="calcPress('5')">5</button>
-                <button type="button" class="calc-key" onclick="calcPress('4')">4</button>
-                <button type="button" class="calc-key" onclick="calcPress('9')">9</button>
-                <button type="button" class="calc-key" onclick="calcPress('8')">8</button>
-                <button type="button" class="calc-key" onclick="calcPress('7')">7</button>
-                <button type="button" class="calc-key calc-back" onclick="calcBackspace()"><i class="fas fa-backspace"></i></button>
-                <button type="button" class="calc-key" onclick="calcPress('0')">0</button>
-                <button type="button" class="calc-key calc-clear" onclick="calcClear()">C</button>
-            </div>
-
-            <div class="modal-actions">
-                <button class="btn btn-cancel" onclick="closeQtyCalculator()" style="flex:1;">إلغاء</button>
-                <button class="btn btn-primary" onclick="calcApply()" style="flex:2;">
-                    <i class="fas fa-check"></i> تطبيق
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // ===== إعدادات الفاتورة الضريبية (باركود ZATCA) =====
         const SELLER_NAME = 'بسطة شوي';
@@ -1973,6 +2020,7 @@
         // ===== بيانات الطلبات الافتراضية (جميع الكميات = صفر) =====
         let orders = [
             { name: 'سيخ اوصال لحم', desc: 'مشوي على الفحم', price: 6.00, qty: 0, options: '', size: 'متوسط', category: 'skewers' },
+            { name: 'سيخ اوصال لحم (غنم)', desc: 'مشوي على الفحم', price: 10.00, qty: 0, options: '', size: 'متوسط', category: 'skewers' },
             { name: 'سيخ اوصال دجاج', desc: 'متبل بالليمون', price: 6.00, qty: 0, options: '', size: 'متوسط', category: 'skewers' },
             { name: 'سيخ كباب لحم', desc: 'لحم مفروم طازج', price: 6.00, qty: 0, options: '', size: 'متوسط', category: 'skewers' },
             { name: 'سيخ كباب دجاج', desc: 'مفروم بالبهارات', price: 6.00, qty: 0, options: '', size: 'متوسط', category: 'skewers' },
@@ -1982,7 +2030,6 @@
             { name: 'سيخ ربيان مشوي', desc: 'ربيان طازج مشوي', price: 8.00, qty: 0, options: '', size: 'متوسط', category: 'skewers' },
             { name: 'صحن ريش غنم', desc: 'ريش غنم مشوية', price: 55.00, qty: 0, options: '', size: 'كبير', category: 'plates' },
             { name: 'صحن ستيك', desc: 'ستيك مشوي', price: 45.00, qty: 0, options: '', size: 'كبير', category: 'plates' },
-            { name: 'سيخ اوصال لحم (غنم)', desc: 'مشوي على الفحم', price: 10.00, qty: 0, options: '', size: 'متوسط', category: 'skewers' },
             { name: 'صحن بطاطس', desc: 'بطاطس مقلية', price: 8.00, qty: 0, options: '', size: 'كبير', category: 'sides' },
             { name: 'صحن حمص', desc: 'حمص بالطحينة', price: 9.00, qty: 0, options: '', size: 'متوسط', category: 'sides' },
             { name: 'شوربة', desc: 'شوربة ساخنة', price: 7.00, qty: 0, options: '', size: 'متوسط', category: 'sides' },
@@ -2011,12 +2058,14 @@
                     <span class="mc-price">${order.price.toFixed(2)}</span>
                     <div class="mc-qty-control">
                         <button class="mc-minus" ${order.qty === 0 ? 'disabled' : ''} onclick="event.stopPropagation(); changeQty(${index}, -1)"><i class="fas fa-minus"></i></button>
-                        <input type="text" class="mc-qty-input" readonly value="${order.qty}" onclick="event.stopPropagation(); openQtyCalculator(${index})" />
+                        <button class="mc-qty-display" onclick="event.stopPropagation(); openQtyKeypad(${index})" title="اضغط لإدخال الكمية">
+                            <i class="fas fa-calculator"></i> ${order.qty}
+                        </button>
                         <button class="mc-plus" onclick="event.stopPropagation(); changeQty(${index}, 1)"><i class="fas fa-plus"></i></button>
-                        <button class="mc-calc" title="حاسبة الكمية" onclick="event.stopPropagation(); openQtyCalculator(${index})"><i class="fas fa-calculator"></i></button>
                     </div>
                     ${order.qty > 0 ? `<input type="text" class="mc-options-input" value="${order.options}" placeholder="اكتب خيارات..." onclick="event.stopPropagation()" onchange="event.stopPropagation(); updateOptions(${index}, this.value)" />` : ''}
                 `;
+                card.onclick = function () { addWithPendingQty(index); };
                 grid.appendChild(card);
             });
         }
@@ -2027,7 +2076,44 @@
             document.getElementById('countDisplay').textContent = activeCount;
             updateTotals();
             renderPrintReceipt();
+            updateOrderMetaNumber();
         }
+
+        // ===== رقم الطلب الظاهر بزاوية شاشة الطلبات (يتحدث مع أي تغيير على orderNo) =====
+        function updateOrderMetaNumber() {
+            const el = document.getElementById('orderMetaNo');
+            if (el) el.textContent = orderNo;
+        }
+
+        // ===== التاريخ والوقت الفعليين بزاوية شاشة الطلبات (وقت حي يتحرك كل ثانية) =====
+        // ملاحظة: نبني التاريخ يدوياً بدون الاعتماد على Intl/locale، لأن بعض متصفحات أجهزة الكاشير
+        // ما تدعم بيانات اللغة العربية كاملة، وأي خطأ هناك كان يوقف باقي كود الصفحة بالكامل.
+        const ARABIC_MONTH_NAMES = [
+            'يناير', 'فبراير', 'مارس', 'إبريل', 'مايو', 'يونيو',
+            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ];
+        function updateOrderMetaClock() {
+            try {
+                const now = new Date();
+                const dateEl = document.getElementById('orderMetaDate');
+                const timeEl = document.getElementById('orderMetaTime');
+                if (dateEl) {
+                    const dd = String(now.getDate()).padStart(2, '0');
+                    const monthName = ARABIC_MONTH_NAMES[now.getMonth()];
+                    dateEl.textContent = `${dd} ${monthName} ${now.getFullYear()}`;
+                }
+                if (timeEl) {
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const mm = String(now.getMinutes()).padStart(2, '0');
+                    const ss = String(now.getSeconds()).padStart(2, '0');
+                    timeEl.textContent = `${hh}:${mm}:${ss}`;
+                }
+            } catch (e) {
+                // أي خطأ هنا ما يوقف باقي الصفحة أبداً
+            }
+        }
+        updateOrderMetaClock();
+        setInterval(updateOrderMetaClock, 1000);
 
         // ===== تغيير الكمية (تبدأ من صفر) =====
         function changeQty(index, delta) {
@@ -2053,50 +2139,495 @@
             renderTable();
         }
 
-        // ===== حاسبة الكمية (لإدخال العدد مباشرة بدلاً من الضغط المتكرر) =====
-        let calcTargetIndex = null;
-        let calcValue = '';
+        // =========================================================
+        // ===== لوحة أرقام إدخال الكمية (بديل سريع عن +/- للأعداد الكبيرة) =====
+        // =========================================================
+        let keypadTargetIndex = null;
+        let keypadValue = '';
 
-        function openQtyCalculator(index) {
-            calcTargetIndex = index;
-            calcValue = orders[index].qty > 0 ? String(orders[index].qty) : '';
-            updateCalcDisplay();
-            document.getElementById('qtyCalcModal').classList.add('active');
+        function openQtyKeypad(index) {
+            const item = orders[index];
+            if (!item) return;
+            keypadTargetIndex = index;
+            keypadValue = item.qty > 0 ? String(item.qty) : '';
+            document.getElementById('keypadItemTitle').innerHTML = `<i class="fas fa-calculator"></i> ${item.name}`;
+            updateKeypadDisplay();
+            document.getElementById('qtyKeypadModal').classList.add('active');
         }
 
-        function closeQtyCalculator() {
-            document.getElementById('qtyCalcModal').classList.remove('active');
-            calcTargetIndex = null;
-            calcValue = '';
+        // ===== زر "الكمية" في شريط الأدوات: تحديد كمية جاهزة، ثم الضغط على أي صنف يضيفها دفعة واحدة =====
+        let pendingQty = 1;
+
+        function openGlobalQtyKeypad() {
+            keypadTargetIndex = 'global';
+            keypadValue = pendingQty > 1 ? String(pendingQty) : '';
+            document.getElementById('keypadItemTitle').innerHTML = '<i class="fas fa-hashtag"></i> حدد الكمية ثم اضغط على الصنف';
+            updateKeypadDisplay();
+            document.getElementById('qtyKeypadModal').classList.add('active');
         }
 
-        function updateCalcDisplay() {
-            const el = document.getElementById('calcDisplayValue');
-            if (el) el.textContent = calcValue !== '' ? calcValue : '0';
+        function updateGlobalQtyBadge() {
+            const badge = document.getElementById('globalQtyBadge');
+            const btn = document.getElementById('globalQtyBtn');
+            if (pendingQty > 1) {
+                badge.textContent = '×' + pendingQty;
+                badge.style.display = 'inline-flex';
+                btn.classList.add('qty-armed');
+            } else {
+                badge.style.display = 'none';
+                btn.classList.remove('qty-armed');
+            }
         }
 
-        function calcPress(digit) {
-            if (calcValue === '0') calcValue = '';
-            if (calcValue.length >= 5) return; // حتى 99999
-            calcValue += digit;
-            updateCalcDisplay();
+        // ===== إضافة صنف بالكمية الجاهزة (تُستهلك مرة واحدة ثم ترجع إلى 1) =====
+        function addWithPendingQty(index) {
+            const wasZero = orders[index].qty === 0;
+            orders[index].qty += pendingQty;
+            if (wasZero && orders[index].qty > 0 && currentTableNumber) {
+                ensureTableSessionStarted(currentTableNumber);
+            }
+            if (pendingQty > 1) {
+                pendingQty = 1;
+                updateGlobalQtyBadge();
+            }
+            renderTable();
         }
 
-        function calcBackspace() {
-            calcValue = calcValue.slice(0, -1);
-            updateCalcDisplay();
+        // =========================================================
+        // ===== الطلب بالصوت (Web Speech API) =====
+        // =========================================================
+        let voiceRecognition = null;
+        let voiceListening = false;      // الميكروفون شغّال فعلياً الآن
+        let voiceShouldListen = false;   // النية: هل يفترض إنه يفضل يستمع باستمرار (وضع أخذ الطلب)
+        let voiceRestartTimer = null;
+
+        // ===== إشعار بصري خفيف بدل alert() اللي يوقف الاستماع =====
+        function getVoiceToastWrap() {
+            let wrap = document.getElementById('voiceToastWrap');
+            if (!wrap) {
+                wrap = document.createElement('div');
+                wrap.id = 'voiceToastWrap';
+                document.body.appendChild(wrap);
+            }
+            return wrap;
+        }
+        function showVoiceToast(message, kind) {
+            const wrap = getVoiceToastWrap();
+            const el = document.createElement('div');
+            el.className = 'voice-toast' + (kind === 'warn' ? ' warn' : kind === 'err' ? ' err' : '');
+            el.textContent = message;
+            wrap.appendChild(el);
+            requestAnimationFrame(() => el.classList.add('show'));
+            const life = kind === 'err' ? 4200 : 3200;
+            setTimeout(() => {
+                el.classList.remove('show');
+                setTimeout(() => el.remove(), 250);
+            }, life);
         }
 
-        function calcClear() {
-            calcValue = '';
-            updateCalcDisplay();
+        // كلمات الأعداد المنطوقة بالعربي (بعد تطبيع النص، التاء المربوطة تتحول إلى هاء)
+        const ARABIC_NUMBER_WORDS = {
+            'صفر': 0,
+            'واحد': 1, 'وحده': 1, 'حبه': 1, 'حبة': 1,
+            'اثنين': 2, 'اثنان': 2, 'ثنتين': 2, 'زوج': 2,
+            'ثلاثه': 3, 'ثلاثة': 3,
+            'اربعه': 4, 'اربعة': 4,
+            'خمسه': 5, 'خمسة': 5,
+            'سته': 6, 'ستة': 6,
+            'سبعه': 7, 'سبعة': 7,
+            'ثمانيه': 8, 'ثمانية': 8,
+            'تسعه': 9, 'تسعة': 9,
+            'عشره': 10, 'عشرة': 10
+        };
+
+        // كلمات الأوامر: حذف كامل، إنقاص، إضافة صريحة، تعديل لقيمة محددة
+        const VOICE_REMOVE_KEYWORDS = ['احذف', 'الغي', 'شيل', 'امسح', 'ازل', 'كنسل', 'الغيها', 'شيله', 'احذفها'];
+        const VOICE_SUBTRACT_KEYWORDS = ['نقص', 'قلل', 'انقص', 'ناقص', 'نقصها', 'قللها'];
+        const VOICE_ADD_KEYWORDS = ['زود', 'زيد', 'ضيف', 'اضف', 'كمل', 'زودها', 'ضيفها', 'زيدها'];
+        const VOICE_SET_KEYWORDS = ['غير', 'عدل', 'خلي', 'خليها', 'خله', 'حط', 'اجعل', 'عدلها', 'غيرها', 'خليه'];
+        const VOICE_TO_TOKEN = 'الي'; // "إلى" بعد التطبيع تصير "الي"
+
+        // كلمات أوامر الفاتورة كاملة (تعليق / طباعة / إغلاق) — تُنفَّذ على مستوى الفاتورة وليست صنف
+        const VOICE_PRINT_KEYWORDS = ['اطبع', 'اطبعها', 'طبع', 'طبعها', 'طباعه'];
+        const VOICE_HOLD_KEYWORDS = ['علق', 'علقها', 'تعليق'];
+        const VOICE_CLOSE_KEYWORDS = ['اغلق', 'اغلقها', 'اغلاق', 'قفل', 'قفلها', 'انهي', 'انهها', 'انهاء'];
+
+        // كلمة الطاولة — تستخدم لأمر تغيير رقم الطاولة الصوتي
+        const VOICE_TABLE_WORD = 'طاوله'; // "طاولة" بعد التطبيع
+
+        // يفحص مقطع ويحدد إذا كان أمر فاتورة كامل (طباعة/تعليق/إغلاق) بدل تعديل صنف
+        function detectInvoiceCommand(words) {
+            if (words.some(w => VOICE_PRINT_KEYWORDS.includes(w))) return 'print';
+            if (words.some(w => VOICE_HOLD_KEYWORDS.includes(w))) return 'hold';
+            if (words.some(w => VOICE_CLOSE_KEYWORDS.includes(w))) return 'close';
+            return null;
         }
 
-        function calcApply() {
-            if (calcTargetIndex === null) return;
-            setQty(calcTargetIndex, calcValue);
-            closeQtyCalculator();
+        // يفحص مقطع ويرجع رقم الطاولة المطلوب لو كان أمر "غيّر رقم الطاولة" (وإلا null)
+        function detectTableNumberCommand(words) {
+            // نبحث عن كلمة تنتهي بـ"طاولة" عشان نلحق صيغ زي "الطاولة"/"لطاولة"/"بالطاولة"
+            const tableWordIdx = words.findIndex(w => w.endsWith(VOICE_TABLE_WORD));
+            if (tableWordIdx === -1) return null;
+            const filtered = words.filter((w, i) =>
+                i !== tableWordIdx &&
+                w !== 'رقم' &&
+                w !== VOICE_TO_TOKEN &&
+                !VOICE_SET_KEYWORDS.includes(w)
+            );
+            const { qty } = pullNumberFromWords(filtered);
+            return (qty === null || qty <= 0) ? null : qty;
         }
+
+        // ينفذ تغيير رقم الطاولة فوراً (نص وصفري الخطورة، ما يحتاج تأكيد)
+        function runVoiceTableNumberChange(num) {
+            const serviceSelect = document.getElementById('serviceType');
+            const input = document.getElementById('tableNumber');
+            if (!input) return;
+            if (serviceSelect) serviceSelect.value = 'طاولة';
+            input.value = num;
+            updateOrderOptions();
+            showVoiceToast(`🪑 تم تغيير رقم الطاولة إلى ${num}`, 'ok');
+        }
+
+        // ينفذ أمر الفاتورة بعد مهلة بسيطة (عشان تبان رسالة إضافة الأصناف أول لو كانت بنفس الجملة)
+        function runVoiceInvoiceCommand(cmd) {
+            setTimeout(() => {
+                const activeOrders = orders.filter(o => o.qty > 0);
+                if (cmd === 'print') {
+                    if (activeOrders.length === 0) {
+                        showVoiceToast('⚠️ لا توجد أصناف بالفاتورة الحالية للطباعة', 'warn');
+                        return;
+                    }
+                    showVoiceToast('🖨️ جاري طباعة الفاتورة...', 'ok');
+                    printReceiptNow();
+                } else if (cmd === 'hold') {
+                    if (activeOrders.length === 0) {
+                        showVoiceToast('⚠️ لا توجد أصناف بالفاتورة الحالية لتعليقها', 'warn');
+                        return;
+                    }
+                    holdInvoice();
+                } else if (cmd === 'close') {
+                    if (activeOrders.length === 0) {
+                        showVoiceToast('⚠️ لا توجد أصناف بالفاتورة الحالية لإغلاقها', 'warn');
+                        return;
+                    }
+                    closeInvoiceWithoutPrint();
+                }
+            }, 700);
+        }
+
+        // تطبيع النص العربي لتسهيل المطابقة (إزالة التشكيل وتوحيد الحروف المتشابهة)
+        function normalizeArabicText(s) {
+            return String(s || '')
+                .replace(/[\u064B-\u0652\u0670]/g, '')
+                .replace(/[إأآا]/g, 'ا')
+                .replace(/ى/g, 'ي')
+                .replace(/ؤ/g, 'و')
+                .replace(/ئ/g, 'ي')
+                .replace(/ة/g, 'ه')
+                .replace(/[^\u0600-\u06FF0-9a-zA-Z\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }
+
+        // فصل الجملة إلى مقاطع، كل مقطع يفترض أنه يمثل صنفاً واحداً (أو أمر تعديل واحد)
+        function splitVoiceSegments(text) {
+            return text.split(/\s+و\s+|\s+ثم\s+|,|، /).map(s => s.trim()).filter(Boolean);
+        }
+
+        // يسحب أول رقم (رقمي أو كلمة عدد) من قائمة كلمات، ويرجع الرقم + بقية الكلمات كنص
+        function pullNumberFromWords(words) {
+            let qty = null;
+            const remaining = [];
+            words.forEach(w => {
+                if (qty === null && /^\d+$/.test(w)) { qty = parseInt(w, 10); return; }
+                if (qty === null && Object.prototype.hasOwnProperty.call(ARABIC_NUMBER_WORDS, w)) { qty = ARABIC_NUMBER_WORDS[w]; return; }
+                remaining.push(w);
+            });
+            return { qty, text: remaining.join(' ') };
+        }
+
+        // يحلل مقطع واحد ويحدد نوع الأمر (إضافة / إنقاص / تعديل مطلق / حذف) + الكمية + اسم الصنف المتبقي
+        function extractActionFromSegment(segment) {
+            let words = segment.split(' ').filter(Boolean);
+
+            // 1) حذف الصنف بالكامل: "احذف سيخ لحم"
+            const removeIdx = words.findIndex(w => VOICE_REMOVE_KEYWORDS.includes(w));
+            if (removeIdx !== -1) {
+                words = words.filter((w, i) => i !== removeIdx && w !== VOICE_TO_TOKEN);
+                return { mode: 'remove', qty: 0, text: words.join(' ') };
+            }
+
+            // 2) إنقاص كمية: "نقص سيخ لحم واحد" أو "نقص سيخ لحم"
+            const subIdx = words.findIndex(w => VOICE_SUBTRACT_KEYWORDS.includes(w));
+            if (subIdx !== -1) {
+                words.splice(subIdx, 1);
+                const { qty, text } = pullNumberFromWords(words);
+                return { mode: 'subtract', qty: qty === null ? 1 : qty, text };
+            }
+
+            // 3) إضافة صريحة: "زود سيخ لحم اثنين" (نفس نتيجة الإضافة الافتراضية، لكن بصيغة أمر واضحة)
+            const addIdx = words.findIndex(w => VOICE_ADD_KEYWORDS.includes(w));
+            if (addIdx !== -1) {
+                words.splice(addIdx, 1);
+                const { qty, text } = pullNumberFromWords(words);
+                return { mode: 'add', qty: qty === null ? 1 : qty, text };
+            }
+
+            // 4) تعديل الكمية لقيمة محددة: "غير سيخ لحم إلى اثنين" أو "خلي سيخ لحم اثنين"
+            const setIdx = words.findIndex(w => VOICE_SET_KEYWORDS.includes(w));
+            const hasToToken = words.includes(VOICE_TO_TOKEN);
+            if (setIdx !== -1 || hasToToken) {
+                if (setIdx !== -1) words.splice(setIdx, 1);
+                const toIdx = words.indexOf(VOICE_TO_TOKEN);
+                if (toIdx !== -1) words.splice(toIdx, 1);
+                const { qty, text } = pullNumberFromWords(words);
+                return { mode: 'set', qty: qty === null ? 0 : qty, text };
+            }
+
+            // 5) الافتراضي: إضافة عادية (نفس السلوك الأصلي) — "سيخ لحم اثنين"
+            const { qty, text } = pullNumberFromWords(words);
+            return { mode: 'add', qty: qty === null ? 1 : qty, text };
+        }
+
+        // البحث عن أقرب صنف مطابق بناءً على عدد الكلمات المشتركة
+        function findBestMatchingItemIndex(text) {
+            const words = text.split(' ').filter(Boolean);
+            if (words.length === 0) return -1;
+            let bestIndex = -1;
+            let bestScore = 0;
+            orders.forEach((order, idx) => {
+                const nameWords = normalizeArabicText(order.name).split(' ').filter(Boolean);
+                let score = 0;
+                nameWords.forEach(w => { if (words.includes(w)) score++; });
+                if (score > bestScore) { bestScore = score; bestIndex = idx; }
+            });
+            return bestScore > 0 ? bestIndex : -1;
+        }
+
+        // تحليل نص الصوت الكامل وتطبيق الأوامر (إضافة/إنقاص/تعديل/حذف/أوامر الفاتورة) على الأصناف المطابقة
+        function parseAndApplyVoiceOrder(rawText) {
+            const normalized = normalizeArabicText(rawText);
+            const segments = splitVoiceSegments(normalized);
+            const applied = [];
+            const notRecognized = [];
+            let invoiceCommand = null;
+
+            segments.forEach(seg => {
+                const segWords = seg.split(' ').filter(Boolean);
+
+                const cmd = detectInvoiceCommand(segWords);
+                if (cmd) {
+                    invoiceCommand = cmd; // أمر على مستوى الفاتورة (طباعة/تعليق/إغلاق) — ما هو صنف
+                    return;
+                }
+
+                const tableNum = detectTableNumberCommand(segWords);
+                if (tableNum !== null) {
+                    runVoiceTableNumberChange(tableNum); // تغيير رقم الطاولة — ينفذ فوراً
+                    return;
+                }
+
+                const { mode, qty, text } = extractActionFromSegment(seg);
+                if (!text) return;
+                const idx = findBestMatchingItemIndex(text);
+                if (idx === -1) {
+                    notRecognized.push(seg);
+                    return;
+                }
+                const item = orders[idx];
+                const wasZero = item.qty === 0;
+
+                if (mode === 'remove') {
+                    item.qty = 0;
+                    applied.push(`🗑️ حذف ${item.name}`);
+                } else if (mode === 'set') {
+                    item.qty = Math.max(0, qty);
+                    applied.push(`${item.name} = ${item.qty}`);
+                } else if (mode === 'subtract') {
+                    item.qty = Math.max(0, item.qty - qty);
+                    applied.push(`${item.name} − ${qty} (صار ${item.qty})`);
+                } else { // add
+                    item.qty += qty;
+                    applied.push(`${item.name} × ${qty}`);
+                }
+
+                if (wasZero && item.qty > 0 && currentTableNumber) {
+                    ensureTableSessionStarted(currentTableNumber);
+                }
+            });
+
+            if (applied.length > 0) renderTable();
+
+            // إشعار خفيف لا يوقف الاستماع (بدل alert اللي يقطع الوضع المستمر)
+            if (applied.length > 0) {
+                showVoiceToast('✅ ' + applied.join(' · '), 'ok');
+            }
+            if (notRecognized.length > 0) {
+                showVoiceToast('⚠️ لم يتم التعرف على: ' + notRecognized.join(' · '), 'warn');
+            }
+            if (applied.length === 0 && notRecognized.length === 0 && !invoiceCommand) {
+                // ما انقال شي مفهوم (مقطع فاضي مثلاً) — تجاهل بصمت، ما نزعج المستخدم
+            }
+
+            if (invoiceCommand) {
+                runVoiceInvoiceCommand(invoiceCommand);
+            }
+        }
+
+        function setVoiceButtonState(listening) {
+            voiceListening = listening;
+            const btn = document.getElementById('voiceOrderBtn');
+            const label = document.getElementById('voiceOrderBtnLabel');
+            if (!btn || !label) return;
+            if (listening) {
+                btn.classList.add('voice-listening');
+                label.textContent = 'يستمع طول الطلب... (اضغط للإيقاف)';
+            } else {
+                btn.classList.remove('voice-listening');
+                label.textContent = 'الطلب بالصوت';
+            }
+        }
+
+        // ينشئ محرك تعرّف صوتي جديد بوضع "مستمر" (continuous) ويشغّله
+        function createAndStartVoiceRecognition() {
+            const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognitionAPI) {
+                voiceShouldListen = false;
+                showVoiceToast('⚠️ الطلب بالصوت غير مدعوم في هذا المتصفح. يعمل على Chrome أو Edge ويحتاج اتصال إنترنت.', 'err');
+                return;
+            }
+
+            voiceRecognition = new SpeechRecognitionAPI();
+            voiceRecognition.lang = 'ar-SA';
+            voiceRecognition.continuous = true;      // يفضل يسمع الطلب كامل بدون ما يوقف بعد كل صنف
+            voiceRecognition.interimResults = false;
+            voiceRecognition.maxAlternatives = 1;
+
+            voiceRecognition.onstart = () => setVoiceButtonState(true);
+
+            voiceRecognition.onend = () => {
+                setVoiceButtonState(false);
+                // إذا لسا الوضع مفعّل (المستخدم ما أوقفه يدوياً ولا غيّر الصفحة) أعد التشغيل تلقائياً
+                if (voiceShouldListen) {
+                    clearTimeout(voiceRestartTimer);
+                    voiceRestartTimer = setTimeout(() => {
+                        if (voiceShouldListen) startVoiceRecognitionInstance();
+                    }, 300);
+                }
+            };
+
+            voiceRecognition.onerror = (e) => {
+                if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+                    voiceShouldListen = false;
+                    setVoiceButtonState(false);
+                    showVoiceToast('⚠️ لم يتم السماح باستخدام الميكروفون. فعّل صلاحية الميكروفون وحاول مجدداً.', 'err');
+                    return;
+                }
+                // أخطاء عادية بوضع الاستماع المستمر (صمت مؤقت، انقطاع بسيط) — تجاهلها وخلي onend يعيد التشغيل
+            };
+
+            voiceRecognition.onresult = (event) => {
+                // بوضع continuous ممكن توصل عدة نتائج نهائية بنفس الجلسة، خذ كل واحدة نهائية جاءت
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const result = event.results[i];
+                    if (result.isFinal) {
+                        const transcript = result[0].transcript;
+                        parseAndApplyVoiceOrder(transcript);
+                    }
+                }
+            };
+
+            try {
+                voiceRecognition.start();
+            } catch (err) {
+                setVoiceButtonState(false);
+            }
+        }
+
+        function startVoiceRecognitionInstance() {
+            // تفادي تشغيل نسختين بنفس الوقت
+            if (voiceRecognition) {
+                try { voiceRecognition.onend = null; voiceRecognition.stop(); } catch (e) {}
+            }
+            createAndStartVoiceRecognition();
+        }
+
+        // تشغيل وضع "أخذ الطلب بالصوت" المستمر — يُستدعى تلقائياً عند فتح صفحة الطلبات
+        function startVoiceOrderAuto() {
+            const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognitionAPI) return; // متصفح ما يدعم، لا تزعج المستخدم تلقائياً
+            if (voiceShouldListen) return; // شغّال أصلاً
+            voiceShouldListen = true;
+            startVoiceRecognitionInstance();
+        }
+
+        // إيقاف وضع الاستماع المستمر — يُستدعى عند مغادرة صفحة الطلبات أو الإيقاف اليدوي
+        function stopVoiceOrderAuto() {
+            voiceShouldListen = false;
+            clearTimeout(voiceRestartTimer);
+            if (voiceRecognition) {
+                try { voiceRecognition.onend = null; voiceRecognition.stop(); } catch (e) {}
+            }
+            setVoiceButtonState(false);
+        }
+
+        // زر التبديل اليدوي: يشتغل لو مقفول، ويوقف لو شغّال
+        function toggleVoiceOrder() {
+            const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognitionAPI) {
+                alert('⚠️ الطلب بالصوت غير مدعوم في هذا المتصفح.\nيعمل حالياً على متصفح Chrome أو Edge على الكمبيوتر أو الجوال، ويحتاج اتصال بالإنترنت.');
+                return;
+            }
+            if (voiceShouldListen) {
+                stopVoiceOrderAuto();
+            } else {
+                startVoiceOrderAuto();
+            }
+        }
+
+        function updateKeypadDisplay() {
+            document.getElementById('keypadDisplay').textContent = keypadValue === '' ? '0' : keypadValue;
+        }
+
+        function keypadPress(digit) {
+            if (keypadValue.length >= 4) return; // حد أقصى 9999
+            keypadValue = (keypadValue === '0' ? '' : keypadValue) + digit;
+            updateKeypadDisplay();
+        }
+
+        function keypadBackspace() {
+            keypadValue = keypadValue.slice(0, -1);
+            updateKeypadDisplay();
+        }
+
+        function keypadClear() {
+            keypadValue = '';
+            updateKeypadDisplay();
+        }
+
+        function keypadConfirm() {
+            if (keypadTargetIndex === null) return;
+            const v = keypadValue === '' ? 0 : parseInt(keypadValue, 10);
+            if (keypadTargetIndex === 'global') {
+                pendingQty = v > 0 ? v : 1;
+                updateGlobalQtyBadge();
+            } else {
+                setQty(keypadTargetIndex, v);
+            }
+            closeQtyKeypad();
+        }
+
+        function closeQtyKeypad() {
+            document.getElementById('qtyKeypadModal').classList.remove('active');
+            keypadTargetIndex = null;
+            keypadValue = '';
+        }
+
+        document.getElementById('qtyKeypadModal').addEventListener('click', function(e) {
+            if (e.target === this) closeQtyKeypad();
+        });
 
         // ===== تحديث خيارات الصنف (يكتبها المستخدم مباشرة) =====
         function updateOptions(index, value) {
@@ -3038,25 +3569,6 @@
             }
         }
 
-        // ===== تصفير طاولة يدويًا: يمسح طلبها المحفوظ ويوقف عداد الوقت =====
-        function resetTable(n, evt) {
-            if (evt) evt.stopPropagation();
-            if (!confirm(`هل تريد تصفير الطاولة ${n}؟ سيتم مسح طلبها الحالي وإيقاف عداد الوقت نهائياً.`)) {
-                return;
-            }
-            const tableStates = getTableStates();
-            delete tableStates[n];
-            saveTableStates(tableStates);
-            clearTableSession(n);
-
-            // إذا كانت هذه الطاولة مفتوحة حالياً على الشاشة، صفّر الطلب المعروض أيضاً
-            if (String(currentTableNumber) === String(n)) {
-                orders.forEach(o => { o.qty = 0; o.options = ''; });
-                renderTable();
-            }
-            renderTablesGrid();
-        }
-
         // تنسيق الوقت المنقضي بشكل mm:ss أو h:mm:ss
         function formatElapsed(openedAt) {
             const diffMs = Date.now() - new Date(openedAt).getTime();
@@ -3076,6 +3588,7 @@
             document.getElementById('navOrdersBtn').classList.remove('active');
             document.getElementById('navReservationsBtn').classList.remove('active');
             renderTablesGrid();
+            stopVoiceOrderAuto(); // طلعنا من صفحة الطلبات، أوقف الاستماع
         }
 
         function switchToOrdersPage() {
@@ -3085,6 +3598,7 @@
             document.getElementById('navOrdersBtn').classList.add('active');
             document.getElementById('navTablesBtn').classList.remove('active');
             document.getElementById('navReservationsBtn').classList.remove('active');
+            startVoiceOrderAuto(); // بمجرد فتح صفحة الطلبات، يشتغل الميكروفون تلقائياً وياخذ الطلب كامل
         }
 
         function setReservationDefaultDateTime() {
@@ -3111,6 +3625,7 @@
             populateReservationTableSelect();
             setReservationDefaultDateTime();
             renderReservationsList();
+            stopVoiceOrderAuto(); // طلعنا من صفحة الطلبات، أوقف الاستماع
         }
 
         function renderTablesGrid() {
@@ -3125,7 +3640,6 @@
                 const occupied = !!state;
                 html += `
                     <div class="table-card ${occupied ? 'occupied' : 'available'}" onclick="enterTable(${i})">
-                        ${(occupied || session) ? `<button class="table-card-reset" title="تصفير الطاولة" onclick="resetTable(${i}, event)"><i class="fas fa-rotate-left"></i></button>` : ''}
                         <i class="fas fa-chair table-card-icon"></i>
                         <span class="table-card-num">طاولة ${i}</span>
                         <span class="table-card-status">${occupied ? `${state.orders.length} صنف · ${state.total.toFixed(2)} ر.س` : 'فاضية'}</span>
