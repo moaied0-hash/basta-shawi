@@ -29,7 +29,14 @@ window.dispatchEvent(new Event('firebase-ready'));
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; -webkit-tap-highlight-color:transparent; }
-body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
+body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; transition: direction 0.2s; }
+
+/* ===== شريط اللغة ===== */
+.lang-bar { background:#0f0f0f; padding:8px 16px; display:flex; justify-content:center; align-items:center; gap:8px; border-radius:0 0 16px 16px; }
+.lang-btn { background:transparent; border:1.5px solid #555; color:#aaa; padding:6px 14px; border-radius:30px; font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }
+.lang-btn:hover { border-color:#888; color:#eee; }
+.lang-btn.active { background:white; color:#1a1a1a; border-color:white; }
+.lang-btn i { font-size:0.9rem; }
 
 /* ===== الهيدر الداكن ===== */
 .header { 
@@ -63,6 +70,7 @@ body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
   border: 2px solid #555;
 }
 .brand-text { text-align: right; }
+html[dir="ltr"] .brand-text { text-align: left; }
 .brand-text h1 { 
   font-size: 1.45rem; 
   font-weight: 800; 
@@ -83,7 +91,6 @@ body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
   margin-top: 4px; 
   letter-spacing: 3px; 
   font-weight: 500;
-  font-family: 'Segoe UI', sans-serif;
 }
 .table-badge { 
   display: inline-flex; 
@@ -115,6 +122,7 @@ body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
 .menu-item { display:flex; align-items:center; justify-content:space-between; background:#faf6f0; border:1px solid #ede3da; border-radius:14px; padding:0.8rem 0.9rem; margin-bottom:8px; gap:10px; }
 .menu-item-info { flex:1; min-width:0; }
 .menu-item-name { font-weight:700; color:#3a2c1c; font-size:0.95rem; }
+.menu-item-name-en { font-size:0.78rem; color:#8a7a6a; font-weight:500; margin-top:1px; }
 .menu-item-price { font-size:0.85rem; color:#1a6faf; font-weight:600; margin-top:2px; }
 .qty-ctrl { display:flex; align-items:center; gap:6px; flex-shrink:0; }
 .qty-ctrl button { width:32px; height:32px; border-radius:50%; border:none; background:#c52a1a; color:white; font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
@@ -147,46 +155,56 @@ body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
 </head>
 <body>
 
+<!-- شريط اللغة -->
+<div class="lang-bar">
+  <button class="lang-btn" id="btnAr" onclick="setLang('ar')">
+    <i class="fas fa-flag"></i> عربي
+  </button>
+  <button class="lang-btn" id="btnEn" onclick="setLang('en')">
+    <i class="fas fa-flag-usa"></i> English
+  </button>
+</div>
+
 <div class="header">
   <div class="header-brand">
     <img src="logo.png" alt="بسطة شوي" class="brand-logo" />
     <div class="brand-text">
-      <h1>بسطة شوي</h1>
-      <div class="sub">للمأكولات الشعبية</div>
+      <h1 id="brandTitle">بسطة شوي</h1>
+      <div class="sub" id="brandSub">للمأكولات الشعبية</div>
       <div class="brand-en">bastatshawi</div>
     </div>
   </div>
   <div class="table-badge" id="tableBadge">
-    <i class="fas fa-chair"></i> طاولة <span id="tableNumText">...</span>
+    <i class="fas fa-chair"></i> <span id="tableLabel">طاولة</span> <span id="tableNumText">...</span>
   </div>
 </div>
 
 <div class="wrap" id="mainWrap">
   <div id="loadingScreen" class="loading">
     <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-    <p style="margin-top:1rem;">جاري التحميل...</p>
+    <p style="margin-top:1rem;" id="loadingText">جاري التحميل...</p>
   </div>
 
   <div id="orderForm" style="display:none;">
     <div class="card">
-      <h2><i class="fas fa-user"></i> بياناتك</h2>
+      <h2><i class="fas fa-user"></i> <span id="infoTitle">بياناتك</span></h2>
       <div class="field">
-        <label>الاسم *</label>
+        <label id="labelName">الاسم *</label>
         <input type="text" id="custName" placeholder="مثال: أبو فهد" autocomplete="name" />
       </div>
       <div class="field">
-        <label>رقم الجوال *</label>
+        <label id="labelPhone">رقم الجوال *</label>
         <input type="tel" id="custPhone" placeholder="05xxxxxxxx" inputmode="numeric" autocomplete="tel" />
       </div>
     </div>
 
     <div class="card">
-      <h2><i class="fas fa-utensils"></i> اختر طلبك</h2>
+      <h2><i class="fas fa-utensils"></i> <span id="menuTitle">اختر طلبك</span></h2>
       <div id="menuList"></div>
     </div>
 
     <div class="card">
-      <h2><i class="fas fa-sticky-note"></i> ملاحظات (اختياري)</h2>
+      <h2><i class="fas fa-sticky-note"></i> <span id="notesTitle">ملاحظات (اختياري)</span></h2>
       <div class="field">
         <textarea id="orderNotes" placeholder="مثال: بدون بصل، زيادة صوص..."></textarea>
       </div>
@@ -195,35 +213,191 @@ body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
 
   <div id="successScreen" class="success-screen" style="display:none;">
     <div class="icon"><i class="fas fa-check-circle"></i></div>
-    <h2>تم استلام طلبك!</h2>
-    <p>سيقوم الموظف بتأكيد طلبك قريبًا</p>
+    <h2 id="successTitle">تم استلام طلبك!</h2>
+    <p id="successSub">سيقوم الموظف بتأكيد طلبك قريبًا</p>
     <div class="order-num" id="successOrderNo">#0</div>
-    <p style="font-size:0.85rem; color:#8a7a6a;">احتفظ برقم الطلب للمتابعة</p>
+    <p style="font-size:0.85rem; color:#8a7a6a;" id="successKeep">احتفظ برقم الطلب للمتابعة</p>
     <button class="new-order-btn" onclick="resetOrder()">
-      <i class="fas fa-plus"></i> طلب جديد
+      <i class="fas fa-plus"></i> <span id="newOrderBtn">طلب جديد</span>
     </button>
   </div>
 </div>
 
 <div class="total-bar" id="totalBar" style="display:none;">
   <div class="sum">
-    <small>الإجمالي</small>
+    <small id="totalLabel">الإجمالي</small>
     <span id="totalAmount">0.00 ر.س</span>
   </div>
   <button class="send-btn" id="sendBtn" onclick="submitOrder()">
-    <i class="fas fa-paper-plane"></i> إرسال الطلب
+    <i class="fas fa-paper-plane"></i> <span id="sendBtnText">إرسال الطلب</span>
   </button>
 </div>
 
 <script>
-const params = new URLSearchParams(location.search);
-let TABLE_NUMBER = params.get('t') || params.get('table') || null;
-if (!TABLE_NUMBER) {
-  document.getElementById('tableBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> لم يتم تحديد الطاولة';
-} else {
-  document.getElementById('tableNumText').textContent = TABLE_NUMBER;
+// =========================================================
+// ===== اللغة =====
+// =========================================================
+let LANG = localStorage.getItem('basta_lang') || 'ar';
+
+const TRANSLATIONS = {
+  ar: {
+    brandTitle: 'بسطة شوي',
+    brandSub: 'للمأكولات الشعبية',
+    tableLabel: 'طاولة',
+    loadingText: 'جاري التحميل...',
+    infoTitle: 'بياناتك',
+    labelName: 'الاسم *',
+    labelPhone: 'رقم الجوال *',
+    namePlaceholder: 'مثال: أبو فهد',
+    menuTitle: 'اختر طلبك',
+    notesTitle: 'ملاحظات (اختياري)',
+    notesPlaceholder: 'مثال: بدون بصل، زيادة صوص...',
+    totalLabel: 'الإجمالي',
+    sendBtnText: 'إرسال الطلب',
+    sendingText: 'جاري الإرسال...',
+    successTitle: 'تم استلام طلبك!',
+    successSub: 'سيقوم الموظف بتأكيد طلبك قريبًا',
+    successKeep: 'احتفظ برقم الطلب للمتابعة',
+    newOrderBtn: 'طلب جديد',
+    currency: 'ر.س',
+    optionsPlaceholder: 'خيارات (اختياري)',
+    catSkewers: '🔥 الأسياخ',
+    catPlates: '🍽️ الأطباق',
+    catSides: '🥗 الجانبية',
+    catDrinks: '🥤 المشروبات',
+    alertTable: '⚠️ لم يتم تحديد رقم الطاولة',
+    alertName: '⚠️ أدخل اسمك',
+    alertPhone: '⚠️ أدخل رقم جوال صحيح',
+    alertItems: '⚠️ اختر صنف واحد على الأقل',
+    alertError: '❌ فشل إرسال الطلب. تأكد من الاتصال بالإنترنت.',
+    noTable: 'لم يتم تحديد الطاولة'
+  },
+  en: {
+    brandTitle: 'Basta Shawi',
+    brandSub: 'Traditional Food',
+    tableLabel: 'Table',
+    loadingText: 'Loading...',
+    infoTitle: 'Your Info',
+    labelName: 'Name *',
+    labelPhone: 'Phone Number *',
+    namePlaceholder: 'Example: Abu Fahd',
+    menuTitle: 'Choose Your Order',
+    notesTitle: 'Notes (Optional)',
+    notesPlaceholder: 'Example: no onion, extra sauce...',
+    totalLabel: 'Total',
+    sendBtnText: 'Send Order',
+    sendingText: 'Sending...',
+    successTitle: 'Order Received!',
+    successSub: 'Staff will confirm your order soon',
+    successKeep: 'Keep your order number',
+    newOrderBtn: 'New Order',
+    currency: 'SAR',
+    optionsPlaceholder: 'Options (optional)',
+    catSkewers: '🔥 Skewers',
+    catPlates: '🍽️ Plates',
+    catSides: '🥗 Side Dishes',
+    catDrinks: '🥤 Drinks',
+    alertTable: '⚠️ Table number not specified',
+    alertName: '⚠️ Please enter your name',
+    alertPhone: '⚠️ Please enter a valid phone number',
+    alertItems: '⚠️ Please select at least one item',
+    alertError: '❌ Failed to send. Please check your connection.',
+    noTable: 'Table not specified'
+  }
+};
+
+// ===== ترجمة الأصناف =====
+const ITEM_TRANSLATIONS = {
+  'سيخ اوصال لحم': 'Meat Skewers',
+  'سيخ اوصال دجاج': 'Chicken Skewers',
+  'سيخ كباب لحم': 'Beef Kebab',
+  'سيخ كباب دجاج': 'Chicken Kebab',
+  'سيخ اجنحة دجاج': 'Chicken Wings',
+  'سيخ دجاج بالعظم': 'Bone-in Chicken',
+  'سيخ كبدة': 'Liver Skewers',
+  'سيخ ربيان مشوي': 'Grilled Shrimp',
+  'صحن ريش غنم': 'Lamb Chops',
+  'صحن ستيك': 'Steak Plate',
+  'سيخ اوصال لحم (غنم)': 'Lamb Skewers',
+  'صحن بطاطس': 'French Fries',
+  'صحن حمص': 'Hummus',
+  'شوربة': 'Soup',
+  'مشروبات غازية': 'Soft Drinks',
+  'شربت': 'Sharbat Drink',
+  'سن توب': 'Sun Top Juice',
+  'سن كولا': 'Sun Cola',
+  'مياه': 'Water',
+  'عصير برتقال طبيعي': 'Fresh Orange Juice'
+};
+
+function t(key) { return TRANSLATIONS[LANG][key] || key; }
+function itemName(arabicName) {
+  if (LANG === 'en' && ITEM_TRANSLATIONS[arabicName]) return ITEM_TRANSLATIONS[arabicName];
+  return arabicName;
+}
+function itemSub(arabicName) {
+  // في الوضع الإنجليزي، نعرض العربي تحت الإنجليزي
+  if (LANG === 'en' && ITEM_TRANSLATIONS[arabicName]) return arabicName;
+  // في الوضع العربي، ما نعرض شيء إضافي
+  return '';
 }
 
+function applyLanguage() {
+  const isAr = LANG === 'ar';
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+  document.title = isAr ? 'بسطة شوي - اطلب من طاولتك' : 'Basta Shawi - Order from your table';
+
+  document.getElementById('brandTitle').textContent = t('brandTitle');
+  document.getElementById('brandSub').textContent = t('brandSub');
+  document.getElementById('tableLabel').textContent = t('tableLabel');
+  document.getElementById('loadingText').textContent = t('loadingText');
+  document.getElementById('infoTitle').textContent = t('infoTitle');
+  document.getElementById('labelName').textContent = t('labelName');
+  document.getElementById('labelPhone').textContent = t('labelPhone');
+  document.getElementById('custName').placeholder = t('namePlaceholder');
+  document.getElementById('menuTitle').textContent = t('menuTitle');
+  document.getElementById('notesTitle').textContent = t('notesTitle');
+  document.getElementById('orderNotes').placeholder = t('notesPlaceholder');
+  document.getElementById('totalLabel').textContent = t('totalLabel');
+  document.getElementById('sendBtnText').textContent = t('sendBtnText');
+  document.getElementById('successTitle').textContent = t('successTitle');
+  document.getElementById('successSub').textContent = t('successSub');
+  document.getElementById('successKeep').textContent = t('successKeep');
+  document.getElementById('newOrderBtn').textContent = t('newOrderBtn');
+
+  // أزرار اللغة
+  document.getElementById('btnAr').classList.toggle('active', isAr);
+  document.getElementById('btnEn').classList.toggle('active', !isAr);
+
+  // إعادة رسم القائمة والأسعار
+  buildMenu();
+  updateTotal();
+
+  // Badge الطاولة
+  if (!TABLE_NUMBER) {
+    document.getElementById('tableBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + t('noTable');
+  } else {
+    document.getElementById('tableBadge').innerHTML = '<i class="fas fa-chair"></i> ' + t('tableLabel') + ' <span id="tableNumText">' + TABLE_NUMBER + '</span>';
+  }
+}
+
+function setLang(lang) {
+  LANG = lang;
+  localStorage.setItem('basta_lang', lang);
+  applyLanguage();
+}
+
+// =========================================================
+// ===== قراءة رقم الطاولة =====
+// =========================================================
+const params = new URLSearchParams(location.search);
+let TABLE_NUMBER = params.get('t') || params.get('table') || null;
+if (TABLE_NUMBER) document.getElementById('tableNumText').textContent = TABLE_NUMBER;
+
+// =========================================================
+// ===== المنيو =====
+// =========================================================
 let MENU = [
   { name:'سيخ اوصال لحم', price:6, category:'skewers' },
   { name:'سيخ اوصال دجاج', price:6, category:'skewers' },
@@ -247,7 +421,6 @@ let MENU = [
   { name:'عصير برتقال طبيعي', price:9, category:'drinks' }
 ];
 
-const CAT_NAMES = { skewers:'🔥 الأسياخ', plates:'🍽️ الأطباق', sides:'🥗 الجانبية', drinks:'🥤 المشروبات' };
 let cart = {};
 
 window.addEventListener('firebase-ready', () => {
@@ -276,19 +449,28 @@ setTimeout(() => {
 function buildMenu() {
   const wrap = document.getElementById('menuList');
   const cats = ['skewers','plates','sides','drinks'];
+  const catNames = {
+    skewers: t('catSkewers'),
+    plates: t('catPlates'),
+    sides: t('catSides'),
+    drinks: t('catDrinks')
+  };
   let html = '';
   cats.forEach(c => {
     const items = MENU.map((m, i) => ({...m, _i:i})).filter(m => m.category === c);
     if (items.length === 0) return;
-    html += '<div class="cat-title">' + CAT_NAMES[c] + '</div>';
+    html += '<div class="cat-title">' + catNames[c] + '</div>';
     items.forEach(m => {
       const idx = m._i;
       const q = cart[idx]?.qty || 0;
+      const displayName = itemName(m.name);
+      const subName = itemSub(m.name);
       html += '<div class="menu-item" id="item-'+idx+'">' +
         '<div class="menu-item-info">' +
-          '<div class="menu-item-name">'+m.name+'</div>' +
-          '<div class="menu-item-price">'+m.price.toFixed(2)+' ر.س</div>' +
-          '<input type="text" class="item-options" placeholder="خيارات (اختياري)" value="'+(cart[idx]?.options||'')+'" onchange="setOptions('+idx+', this.value)" onclick="event.stopPropagation()" />' +
+          '<div class="menu-item-name">'+displayName+'</div>' +
+          (subName ? '<div class="menu-item-name-en">'+subName+'</div>' : '') +
+          '<div class="menu-item-price">'+m.price.toFixed(2)+' '+t('currency')+'</div>' +
+          '<input type="text" class="item-options" placeholder="'+t('optionsPlaceholder')+'" value="'+(cart[idx]?.options||'')+'" onchange="setOptions('+idx+', this.value)" onclick="event.stopPropagation()" />' +
         '</div>' +
         '<div class="qty-ctrl">' +
           '<button class="minus" '+(q===0?'disabled':'')+' onclick="changeQty('+idx+',-1)"><i class="fas fa-minus"></i></button>' +
@@ -328,22 +510,23 @@ function updateTotal() {
     total += MENU[i].price * v.qty;
     count += v.qty;
   });
-  document.getElementById('totalAmount').textContent = total.toFixed(2) + ' ر.س';
+  document.getElementById('totalAmount').textContent = total.toFixed(2) + ' ' + t('currency');
   document.getElementById('sendBtn').disabled = count === 0;
 }
 
 async function submitOrder() {
-  if (!TABLE_NUMBER) { alert('⚠️ لم يتم تحديد رقم الطاولة'); return; }
+  if (!TABLE_NUMBER) { alert(t('alertTable')); return; }
   const name = document.getElementById('custName').value.trim();
   const phone = document.getElementById('custPhone').value.trim();
   const notes = document.getElementById('orderNotes').value.trim();
 
-  if (!name) { alert('⚠️ أدخل اسمك'); document.getElementById('custName').focus(); return; }
-  if (!phone || phone.length < 9) { alert('⚠️ أدخل رقم جوال صحيح'); document.getElementById('custPhone').focus(); return; }
-  if (Object.keys(cart).length === 0) { alert('⚠️ اختر صنف واحد على الأقل'); return; }
+  if (!name) { alert(t('alertName')); document.getElementById('custName').focus(); return; }
+  if (!phone || phone.length < 9) { alert(t('alertPhone')); document.getElementById('custPhone').focus(); return; }
+  if (Object.keys(cart).length === 0) { alert(t('alertItems')); return; }
 
   const items = Object.entries(cart).map(([i, v]) => ({
     name: MENU[i].name,
+    nameEn: ITEM_TRANSLATIONS[MENU[i].name] || '',
     price: MENU[i].price,
     qty: v.qty,
     options: v.options || ''
@@ -352,7 +535,7 @@ async function submitOrder() {
 
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + t('sendingText');
 
   try {
     const { db, ref, push, set } = window.FB;
@@ -366,6 +549,7 @@ async function submitOrder() {
       items: items,
       total: +total.toFixed(2),
       status: 'pending',
+      language: LANG,
       createdAt: Date.now(),
       createdAtISO: new Date().toISOString()
     });
@@ -377,9 +561,9 @@ async function submitOrder() {
     window.scrollTo(0, 0);
   } catch (e) {
     console.error(e);
-    alert('❌ فشل إرسال الطلب. تأكد من الاتصال بالإنترنت.');
+    alert(t('alertError'));
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + t('sendBtnText');
   }
 }
 
@@ -391,11 +575,14 @@ function resetOrder() {
   document.getElementById('successScreen').style.display = 'none';
   document.getElementById('orderForm').style.display = '';
   document.getElementById('totalBar').style.display = 'flex';
-  document.getElementById('sendBtn').innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
+  document.getElementById('sendBtn').innerHTML = '<i class="fas fa-paper-plane"></i> <span id="sendBtnText">' + t('sendBtnText') + '</span>';
   buildMenu();
   updateTotal();
   window.scrollTo(0, 0);
 }
+
+// تطبيق اللغة عند التحميل
+applyLanguage();
 </script>
 </body>
 </html>
