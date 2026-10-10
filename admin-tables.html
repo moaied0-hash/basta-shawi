@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, onValue, update, remove }
+import { getDatabase, ref, onValue, update, remove, set, get }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 const firebaseConfig = {
     apiKey: "AIzaSyCa22I08mvNFWG37agpoxxvc1kwz_YeuiY",
@@ -20,42 +20,99 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-window.FB = { db, ref, onValue, update, remove };
+window.FB = { db, ref, onValue, update, remove, set, get };
 window.dispatchEvent(new Event('firebase-ready'));
 </script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
 body { background:#f5f0eb; min-height:100vh; padding:1rem; }
-.header { max-width:1200px; margin:0 auto 1rem; background:linear-gradient(135deg,#c52a1a,#a82214); color:white; padding:1.2rem; border-radius:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; }
+.header { max-width:1200px; margin:0 auto 1rem; background:linear-gradient(135deg,#c52a1a,#a82214); color:white; padding:1.2rem; border-radius:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; box-shadow:0 8px 24px -8px rgba(197,42,26,0.4); }
 .header h1 { font-size:1.4rem; display:flex; align-items:center; gap:10px; }
-.badge { background:white; color:#c52a1a; padding:4px 14px; border-radius:40px; font-weight:800; font-size:0.9rem; }
-.grid { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; }
-.order-card { background:white; border-radius:18px; padding:1.2rem; box-shadow:0 6px 20px -8px rgba(0,0,0,0.12); border-right:5px solid #e6b325; }
-.order-card.confirmed { border-right-color:#1f7b4d; opacity:0.7; }
-.order-card.rejected { border-right-color:#999; opacity:0.5; }
+.badge { background:white; color:#c52a1a; padding:4px 14px; border-radius:40px; font-weight:800; font-size:0.9rem; display:inline-flex; align-items:center; gap:6px; }
+.badge.pulse { animation: badgePulse 1s infinite; }
+@keyframes badgePulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.1); } }
+.btn-cashier-link { background:white; color:#c52a1a; padding:8px 16px; border-radius:40px; text-decoration:none; font-weight:700; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px; }
+.btn-cashier-link:hover { background:#f5e6d0; }
+
+/* ===== أدوات التحكم ===== */
+.toolbar { max-width:1200px; margin:0 auto 1rem; background:white; border-radius:16px; padding:0.8rem 1rem; display:flex; gap:10px; flex-wrap:wrap; align-items:center; box-shadow:0 4px 12px -6px rgba(0,0,0,0.1); }
+.search-box { flex:1; min-width:200px; position:relative; }
+.search-box input { width:100%; padding:10px 14px 10px 40px; border:2px solid #e3d7cc; border-radius:40px; font-size:0.9rem; background:#fefcf9; }
+.search-box input:focus { outline:none; border-color:#c52a1a; }
+.search-box i { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#a38774; }
+.filter-group { display:flex; gap:6px; flex-wrap:wrap; }
+.filter-btn { background:#faf6f0; border:1.5px solid #e3d7cc; color:#3a2c1c; padding:8px 14px; border-radius:40px; font-size:0.82rem; font-weight:600; cursor:pointer; transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; }
+.filter-btn:hover { background:#f0e6da; }
+.filter-btn.active { background:#3a2c1c; color:white; border-color:#3a2c1c; }
+.filter-btn .count { background:#c52a1a; color:white; font-size:0.7rem; padding:1px 7px; border-radius:40px; }
+.filter-btn.active .count { background:#e6b325; color:#3a2c1c; }
+.btn-clean { background:#8a7a68; color:white; border:none; padding:8px 16px; border-radius:40px; font-size:0.82rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.btn-clean:hover { background:#6f6152; }
+
+/* ===== شبكة الطلبات ===== */
+.grid { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:14px; }
+.order-card { background:white; border-radius:18px; padding:1.2rem; box-shadow:0 6px 20px -8px rgba(0,0,0,0.12); border-right:5px solid #e6b325; transition: transform 0.15s, box-shadow 0.15s; position:relative; }
+.order-card:hover { transform:translateY(-2px); box-shadow:0 10px 26px -10px rgba(0,0,0,0.15); }
+.order-card.new { border-right-color:#e6b325; animation: newCard 2s ease; }
+@keyframes newCard { 0% { background:#fff8e5; } 100% { background:white; } }
+.order-card.confirmed { border-right-color:#1f7b4d; }
+.order-card.sent { border-right-color:#2f8fc2; background:#f4faff; }
+.order-card.rejected { border-right-color:#999; opacity:0.55; }
 .order-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.8rem; gap:8px; }
-.order-table { background:#c52a1a; color:white; padding:4px 12px; border-radius:40px; font-weight:800; font-size:0.85rem; }
+.order-table { background:#c52a1a; color:white; padding:4px 12px; border-radius:40px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px; }
+.order-card.sent .order-table { background:#2f8fc2; }
+.order-card.confirmed .order-table { background:#1f7b4d; }
 .order-time { font-size:0.75rem; color:#8a7a6a; }
+.order-time-ago { font-size:0.72rem; color:#c52a1a; font-weight:700; margin-top:2px; }
 .order-cust { background:#faf6f0; padding:0.7rem; border-radius:10px; margin-bottom:0.8rem; font-size:0.88rem; }
-.order-cust div { margin:2px 0; }
-.order-cust i { color:#c52a1a; width:16px; }
+.order-cust div { margin:3px 0; display:flex; align-items:center; gap:6px; }
+.order-cust i { color:#c52a1a; width:16px; flex-shrink:0; }
 .order-items { font-size:0.85rem; margin-bottom:0.8rem; }
-.order-item-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #eee; }
+.order-item-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed #eee; }
 .order-item-row:last-child { border-bottom:none; }
 .order-options-line { font-size:0.75rem; color:#8a7a6a; margin-right:8px; }
 .order-total { display:flex; justify-content:space-between; font-weight:800; font-size:1rem; padding:0.7rem 0; border-top:2px solid #f0e6da; margin-bottom:0.8rem; }
 .order-total span:last-child { color:#c52a1a; }
-.actions { display:flex; gap:8px; }
-.actions button { flex:1; padding:10px; border:none; border-radius:10px; font-weight:700; font-size:0.9rem; cursor:pointer; }
+
+.actions { display:flex; gap:8px; flex-wrap:wrap; }
+.actions button { flex:1; min-width:80px; padding:10px; border:none; border-radius:10px; font-weight:700; font-size:0.85rem; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:all 0.15s; }
+.actions button:hover { transform:translateY(-1px); }
 .btn-confirm { background:#1f7b4d; color:white; }
+.btn-confirm:hover { background:#14633b; }
+.btn-send { background:#2f8fc2; color:white; }
+.btn-send:hover { background:#217aad; }
 .btn-reject { background:#dc3545; color:white; }
-.btn-delete { background:#8a7a68; color:white; flex:0 0 46px !important; }
-.empty { text-align:center; padding:4rem 2rem; color:#a38774; }
-.empty i { font-size:3rem; margin-bottom:1rem; display:block; }
-.status-badge { display:inline-block; padding:3px 10px; border-radius:40px; font-size:0.75rem; font-weight:700; }
+.btn-reject:hover { background:#b02a37; }
+.btn-delete { background:#8a7a68; color:white; flex:0 0 44px !important; min-width:44px !important; padding:10px 0 !important; }
+
+/* ===== شارات الحالة ===== */
+.status-badge { display:inline-block; padding:3px 10px; border-radius:40px; font-size:0.72rem; font-weight:700; }
 .status-badge.pending { background:#f7e3d4; color:#a55f3a; }
 .status-badge.confirmed { background:#d0e6d9; color:#1a6b3f; }
+.status-badge.sent { background:#d4e9f7; color:#1a5b8a; }
 .status-badge.rejected { background:#e9e5e0; color:#999; }
+
+.empty { grid-column:1/-1; text-align:center; padding:4rem 2rem; color:#a38774; }
+.empty i { font-size:3rem; margin-bottom:1rem; display:block; }
+.empty-msg { font-size:1.1rem; font-weight:700; color:#3a2c1c; margin-bottom:0.4rem; }
+.empty-sub { font-size:0.85rem; }
+
+/* ===== صوت التنبيه ===== */
+.toast-notification { position:fixed; bottom:20px; right:20px; background:#2c2118; color:white; padding:14px 20px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.3); border-right:5px solid #e6b325; display:flex; align-items:center; gap:12px; z-index:9999; animation: toastIn 0.4s ease; max-width:340px; }
+@keyframes toastIn { from { transform:translateX(30px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+.toast-notification i { color:#e6b325; font-size:1.6rem; }
+.toast-notification .title { font-weight:800; font-size:0.95rem; }
+.toast-notification .sub { font-size:0.8rem; opacity:0.85; margin-top:2px; }
+
+@media (max-width:600px) {
+  body { padding:0.5rem; }
+  .header { padding:1rem; border-radius:16px; }
+  .header h1 { font-size:1.15rem; }
+  .toolbar { padding:0.6rem; }
+  .grid { grid-template-columns:1fr; }
+  .filter-btn { font-size:0.75rem; padding:6px 10px; }
+  .actions button { font-size:0.8rem; padding:9px 6px; }
+}
 </style>
 </head>
 <body>
@@ -64,10 +121,37 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
   <h1><i class="fas fa-bell"></i> طلبات الزبائن</h1>
   <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
     <span class="badge" id="pendingCount"><i class="fas fa-clock"></i> 0 جديد</span>
-    <a href="index-v3.html" style="background:white; color:#c52a1a; padding:8px 16px; border-radius:40px; text-decoration:none; font-weight:700; font-size:0.85rem;">
-      <i class="fas fa-cash-register"></i> الكاشير
+    <a href="index-v3.html" target="_blank" class="btn-cashier-link">
+      <i class="fas fa-cash-register"></i> فتح الكاشير
     </a>
   </div>
+</div>
+
+<div class="toolbar">
+  <div class="search-box">
+    <i class="fas fa-search"></i>
+    <input type="text" id="searchInput" placeholder="ابحث بالطاولة أو اسم الزبون أو الجوال..." oninput="applyFilters()" />
+  </div>
+  <div class="filter-group" id="filterGroup">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">
+      <i class="fas fa-list"></i> الكل <span class="count" id="cntAll">0</span>
+    </button>
+    <button class="filter-btn" data-filter="pending" onclick="setFilter('pending')">
+      <i class="fas fa-clock"></i> جديد <span class="count" id="cntPending">0</span>
+    </button>
+    <button class="filter-btn" data-filter="confirmed" onclick="setFilter('confirmed')">
+      <i class="fas fa-check"></i> مؤكد <span class="count" id="cntConfirmed">0</span>
+    </button>
+    <button class="filter-btn" data-filter="sent" onclick="setFilter('sent')">
+      <i class="fas fa-paper-plane"></i> مُرسل <span class="count" id="cntSent">0</span>
+    </button>
+    <button class="filter-btn" data-filter="rejected" onclick="setFilter('rejected')">
+      <i class="fas fa-times"></i> مرفوض <span class="count" id="cntRejected">0</span>
+    </button>
+  </div>
+  <button class="btn-clean" onclick="cleanConfirmed()">
+    <i class="fas fa-broom"></i> حذف المؤكدة
+  </button>
 </div>
 
 <div class="grid" id="ordersGrid">
@@ -75,79 +159,347 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
 </div>
 
 <script>
+// =========================================================
+// ===== الإعدادات =====
+// =========================================================
 let allOrders = [];
+let currentFilter = 'all';
+let searchQuery = '';
+let knownOrderIds = new Set();
+let isFirstLoad = true;
+let audioCtx = null;
 
+// =========================================================
+// ===== الاستماع من Firebase =====
+// =========================================================
 window.addEventListener('firebase-ready', () => {
   const { db, ref, onValue } = window.FB;
   onValue(ref(db, 'customerOrders'), (snap) => {
     const data = snap.val() || {};
     allOrders = Object.entries(data).map(([id, o]) => ({ id, ...o }));
     allOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    // ===== كشف الطلبات الجديدة =====
+    const currentIds = new Set(allOrders.map(o => o.id));
+    if (isFirstLoad) {
+      knownOrderIds = currentIds;
+      isFirstLoad = false;
+    } else {
+      const newOnes = allOrders.filter(o => !knownOrderIds.has(o.id) && o.status === 'pending');
+      if (newOnes.length > 0) {
+        playNewOrderSound();
+        vibrateDevice();
+        const first = newOnes[0];
+        showToast('🔔 طلب جديد!', 'طاولة ' + first.tableNumber + ' · ' + first.customerName);
+      }
+      knownOrderIds = currentIds;
+    }
+
     render();
   });
 });
 
-function render() {
-  const grid = document.getElementById('ordersGrid');
-  const pending = allOrders.filter(o => o.status === 'pending').length;
-  document.getElementById('pendingCount').innerHTML = '<i class="fas fa-clock"></i> ' + pending + ' جديد';
+// =========================================================
+// ===== صوت التنبيه =====
+// =========================================================
+function playNewOrderSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
 
-  if (allOrders.length === 0) {
-    grid.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><div>لا توجد طلبات حاليًا</div></div>';
+    // نغمة ثلاثية (بينج-بينج-بينج)
+    const notes = [
+      { freq: 880, start: 0.0, dur: 0.15 },
+      { freq: 1108, start: 0.18, dur: 0.15 },
+      { freq: 1318, start: 0.36, dur: 0.35 }
+    ];
+    notes.forEach(n => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = n.freq;
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + n.start);
+      gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + n.start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + n.start + n.dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(audioCtx.currentTime + n.start);
+      osc.stop(audioCtx.currentTime + n.start + n.dur);
+    });
+  } catch (e) { console.log('تعذر تشغيل الصوت:', e); }
+}
+
+function vibrateDevice() {
+  if ('vibrate' in navigator) {
+    navigator.vibrate([200, 100, 200, 100, 400]);
+  }
+}
+
+// =========================================================
+// ===== إشعار منبثق =====
+// =========================================================
+function showToast(title, sub) {
+  const el = document.createElement('div');
+  el.className = 'toast-notification';
+  el.innerHTML = '<i class="fas fa-bell"></i><div><div class="title">' + title + '</div><div class="sub">' + sub + '</div></div>';
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s, transform 0.4s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(30px)';
+    setTimeout(() => el.remove(), 400);
+  }, 5000);
+}
+
+// =========================================================
+// ===== رسم الطلبات =====
+// =========================================================
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'الآن';
+  if (diff < 3600) return 'منذ ' + Math.floor(diff / 60) + ' د';
+  if (diff < 86400) return 'منذ ' + Math.floor(diff / 3600) + ' س';
+  return 'منذ ' + Math.floor(diff / 86400) + ' يوم';
+}
+
+function applyFilters() {
+  searchQuery = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  render();
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
+  render();
+}
+
+function updateCounts() {
+  const c = { all: allOrders.length, pending: 0, confirmed: 0, sent: 0, rejected: 0 };
+  allOrders.forEach(o => { if (c[o.status] !== undefined) c[o.status]++; });
+  document.getElementById('cntAll').textContent = c.all;
+  document.getElementById('cntPending').textContent = c.pending;
+  document.getElementById('cntConfirmed').textContent = c.confirmed;
+  document.getElementById('cntSent').textContent = c.sent;
+  document.getElementById('cntRejected').textContent = c.rejected;
+
+  const badge = document.getElementById('pendingCount');
+  badge.innerHTML = '<i class="fas fa-clock"></i> ' + c.pending + ' جديد';
+  badge.classList.toggle('pulse', c.pending > 0);
+}
+
+function render() {
+  updateCounts();
+  const grid = document.getElementById('ordersGrid');
+
+  let filtered = allOrders;
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(o => o.status === currentFilter);
+  }
+  if (searchQuery) {
+    filtered = filtered.filter(o => {
+      return String(o.tableNumber || '').includes(searchQuery) ||
+             String(o.customerName || '').toLowerCase().includes(searchQuery) ||
+             String(o.customerPhone || '').includes(searchQuery);
+    });
+  }
+
+  if (filtered.length === 0) {
+    const msg = allOrders.length === 0 ? 'لا توجد طلبات حاليًا' : 'لا توجد نتائج مطابقة';
+    grid.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><div class="empty-msg">' + msg + '</div><div class="empty-sub">الطلبات الجديدة ستظهر تلقائيًا هنا</div></div>';
     return;
   }
 
-  grid.innerHTML = allOrders.slice(0, 60).map(o => {
+  grid.innerHTML = filtered.slice(0, 100).map(o => {
     const d = new Date(o.createdAt || Date.now());
     const time = d.toLocaleTimeString('ar-SA', { hour:'2-digit', minute:'2-digit' });
+    const ago = timeAgo(o.createdAt || Date.now());
     const items = (o.items || []).map(it =>
       '<div class="order-item-row">' +
-        '<span>'+it.name+(it.options ? ' <span class="order-options-line">('+it.options+')</span>' : '')+'</span>' +
-        '<span>×'+it.qty+' · '+(it.price*it.qty).toFixed(2)+'</span>' +
+        '<span>' + it.name + (it.options ? ' <span class="order-options-line">(' + it.options + ')</span>' : '') + '</span>' +
+        '<span>×' + it.qty + ' · ' + (it.price * it.qty).toFixed(2) + '</span>' +
       '</div>'
     ).join('');
-    const stCls = o.status === 'pending' ? 'pending' : o.status === 'confirmed' ? 'confirmed' : 'rejected';
-    const stLabel = o.status === 'pending' ? 'جديد' : o.status === 'confirmed' ? 'مؤكد' : 'مرفوض';
-    const actions = o.status === 'pending' ?
-      '<button class="btn-confirm" onclick="confirmOrder(\''+o.id+'\')"><i class="fas fa-check"></i> تأكيد</button>' +
-      '<button class="btn-reject" onclick="rejectOrder(\''+o.id+'\')"><i class="fas fa-times"></i> رفض</button>' +
-      '<button class="btn-delete" onclick="deleteOrder(\''+o.id+'\')"><i class="fas fa-trash"></i></button>'
-      : '<button class="btn-delete" style="flex:1" onclick="deleteOrder(\''+o.id+'\')"><i class="fas fa-trash"></i> حذف</button>';
 
-    return '<div class="order-card '+stCls+'">' +
+    const stCls = o.status === 'pending' ? 'pending'
+                : o.status === 'confirmed' ? 'confirmed'
+                : o.status === 'sent' ? 'sent' : 'rejected';
+    const stLabel = o.status === 'pending' ? 'جديد'
+                  : o.status === 'confirmed' ? 'مؤكد'
+                  : o.status === 'sent' ? 'مُرسل للكاشير' : 'مرفوض';
+
+    let actions = '';
+    if (o.status === 'pending') {
+      actions =
+        '<button class="btn-confirm" onclick="confirmOrder(\'' + o.id + '\')"><i class="fas fa-check"></i> تأكيد</button>' +
+        '<button class="btn-reject" onclick="rejectOrder(\'' + o.id + '\')"><i class="fas fa-times"></i> رفض</button>' +
+        '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
+    } else if (o.status === 'confirmed') {
+      actions =
+        '<button class="btn-send" onclick="sendToCashier(\'' + o.id + '\')" style="flex:2"><i class="fas fa-paper-plane"></i> إرسال للكاشير</button>' +
+        '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
+    } else if (o.status === 'sent') {
+      actions =
+        '<button class="btn-confirm" onclick="resendToCashier(\'' + o.id + '\')" style="flex:2"><i class="fas fa-redo"></i> إعادة الإرسال</button>' +
+        '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
+    } else {
+      actions =
+        '<button class="btn-delete" style="flex:1" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i> حذف</button>';
+    }
+
+    return '<div class="order-card ' + (o.status === 'pending' ? 'new ' : '') + stCls + '">' +
       '<div class="order-head">' +
-        '<div class="order-table"><i class="fas fa-chair"></i> طاولة '+o.tableNumber+'</div>' +
+        '<div class="order-table"><i class="fas fa-chair"></i> طاولة ' + o.tableNumber + '</div>' +
         '<div style="text-align:left">' +
-          '<div class="order-time">'+time+'</div>' +
-          '<span class="status-badge '+stCls+'">'+stLabel+'</span>' +
+          '<div class="order-time">' + time + '</div>' +
+          '<div class="order-time-ago">' + ago + '</div>' +
+          '<span class="status-badge ' + stCls + '">' + stLabel + '</span>' +
         '</div>' +
       '</div>' +
       '<div class="order-cust">' +
-        '<div><i class="fas fa-user"></i> '+o.customerName+'</div>' +
-        '<div><i class="fas fa-phone"></i> '+o.customerPhone+'</div>' +
-        (o.notes ? '<div><i class="fas fa-sticky-note"></i> '+o.notes+'</div>' : '') +
+        '<div><i class="fas fa-user"></i> ' + (o.customerName || '-') + '</div>' +
+        '<div><i class="fas fa-phone"></i> ' + (o.customerPhone || '-') + '</div>' +
+        (o.notes ? '<div><i class="fas fa-sticky-note"></i> ' + o.notes + '</div>' : '') +
       '</div>' +
-      '<div class="order-items">'+items+'</div>' +
-      '<div class="order-total"><span>الإجمالي</span><span>'+(o.total||0).toFixed(2)+' ر.س</span></div>' +
-      '<div class="actions">'+actions+'</div>' +
+      '<div class="order-items">' + items + '</div>' +
+      '<div class="order-total"><span>الإجمالي</span><span>' + (o.total || 0).toFixed(2) + ' ر.س</span></div>' +
+      '<div class="actions">' + actions + '</div>' +
     '</div>';
   }).join('');
 }
 
+// تحديث الوقت كل 30 ثانية
+setInterval(() => { if (allOrders.length > 0) render(); }, 30000);
+
+// =========================================================
+// ===== عمليات على الطلبات =====
+// =========================================================
 window.confirmOrder = async (id) => {
   const { db, ref, update } = window.FB;
-  await update(ref(db, 'customerOrders/'+id), { status: 'confirmed', confirmedAt: Date.now() });
+  await update(ref(db, 'customerOrders/' + id), { status: 'confirmed', confirmedAt: Date.now() });
+  playNewOrderSound();
 };
+
 window.rejectOrder = async (id) => {
   if (!confirm('رفض الطلب؟')) return;
   const { db, ref, update } = window.FB;
-  await update(ref(db, 'customerOrders/'+id), { status: 'rejected', rejectedAt: Date.now() });
+  await update(ref(db, 'customerOrders/' + id), { status: 'rejected', rejectedAt: Date.now() });
 };
+
 window.deleteOrder = async (id) => {
   if (!confirm('حذف الطلب نهائيًا؟')) return;
   const { db, ref, remove } = window.FB;
-  await remove(ref(db, 'customerOrders/'+id));
+  await remove(ref(db, 'customerOrders/' + id));
 };
+
+window.cleanConfirmed = async () => {
+  const confirmed = allOrders.filter(o => o.status === 'confirmed' || o.status === 'rejected');
+  if (confirmed.length === 0) { alert('لا توجد طلبات مؤكدة أو مرفوضة'); return; }
+  if (!confirm('حذف ' + confirmed.length + ' طلب (مؤكد/مرفوض)؟')) return;
+  const { db, ref, remove } = window.FB;
+  for (const o of confirmed) {
+    await remove(ref(db, 'customerOrders/' + o.id));
+  }
+};
+
+// =========================================================
+// ===== إرسال للكاشير =====
+// =========================================================
+window.sendToCashier = async (id) => {
+  const order = allOrders.find(o => o.id === id);
+  if (!order) return;
+
+  const btn = event.target.closest('button');
+  const oldHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+
+  try {
+    const { db, ref, set, get } = window.FB;
+
+    // 1) نجيب الطلبات الحالية للطاولات
+    const snap = await get(ref(db, 'tableStates'));
+    const tableStates = snap.val() || {};
+
+    // 2) نبني محتوى الطلب بصيغة index-v3
+    const activeItems = order.items.map(it => ({
+      name: it.name,
+      desc: '',
+      price: it.price,
+      qty: it.qty,
+      options: it.options || '',
+      size: 'متوسط',
+      category: 'skewers'
+    }));
+
+    // 3) نحفظ في tableStates (نفس البنية اللي يقرأها index-v3)
+    tableStates[order.tableNumber] = {
+      orders: activeItems,
+      notes: order.notes || '',
+      invoiceNo: String(Date.now()).slice(-6),
+      orderNo: 'R-' + order.id.slice(-5).toUpperCase(),
+      total: +order.total,
+      updatedAt: new Date().toISOString(),
+      source: 'customerOrder',
+      customerName: order.customerName,
+      customerPhone: order.customerPhone
+    };
+
+    await set(ref(db, 'tableStates'), tableStates);
+
+    // 4) نحفظ للجلسة (عشان المؤقت يشتغل)
+    const sessSnap = await get(ref(db, 'tableSessions'));
+    const sessions = sessSnap.val() || {};
+    if (!sessions[order.tableNumber]) {
+      sessions[order.tableNumber] = { openedAt: new Date().toISOString() };
+      await set(ref(db, 'tableSessions'), sessions);
+    }
+
+    // 5) نحدّث حالة الطلب في admin
+    await update(ref(db, 'customerOrders/' + id), {
+      status: 'sent',
+      sentAt: Date.now()
+    });
+
+    // 6) نفتح الكاشير في تاب جديد
+    window.open('index-v3.html', '_blank');
+
+    showToast('✅ تم الإرسال', 'الطاولة ' + order.tableNumber + ' صارت جاهزة في الكاشير');
+
+  } catch (e) {
+    console.error(e);
+    alert('❌ فشل الإرسال. تأكد من الاتصال.');
+    btn.disabled = false;
+    btn.innerHTML = oldHtml;
+  }
+};
+
+window.resendToCashier = async (id) => {
+  if (!confirm('إعادة الإرسال للكاشير؟')) return;
+  await window.sendToCashier(id);
+};
+
+// =========================================================
+// ===== تفعيل الصوت مع أول تفاعل =====
+// =========================================================
+document.addEventListener('click', function initAudio() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {}
+  }
+}, { once: true });
+
+// =========================================================
+// ===== تحديث عنوان التاب =====
+// =========================================================
+setInterval(() => {
+  const pending = allOrders.filter(o => o.status === 'pending').length;
+  document.title = pending > 0
+    ? '🔔 (' + pending + ') طلبات الزبائن - بسطة شوي'
+    : 'طلبات الزبائن - بسطة شوي';
+}, 2000);
 </script>
 </body>
 </html>
