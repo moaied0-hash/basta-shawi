@@ -63,6 +63,11 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
 .order-table { background:#c52a1a; color:white; padding:4px 12px; border-radius:40px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px; }
 .order-card.sent .order-table { background:#2f8fc2; }
 .order-card.confirmed .order-table { background:#1f7b4d; }
+
+/* زر تعديل الطاولة */
+.btn-edit-table { background:white; color:#c52a1a; border:1.5px solid #c52a1a; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:0.7rem; cursor:pointer; margin-right:4px; transition:all 0.15s; padding:0; }
+.btn-edit-table:hover { background:#c52a1a; color:white; transform:scale(1.1); }
+
 .order-time { font-size:0.75rem; color:#8a7a6a; }
 .order-time-ago { font-size:0.72rem; color:#c52a1a; font-weight:700; margin-top:2px; }
 .order-cust { background:#faf6f0; padding:0.7rem; border-radius:10px; margin-bottom:0.8rem; font-size:0.88rem; }
@@ -110,6 +115,21 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
 .toast-notification .title { font-weight:800; font-size:0.95rem; }
 .toast-notification .sub { font-size:0.8rem; opacity:0.85; margin-top:2px; }
 
+/* ===== نافذة تعديل الطاولة ===== */
+.table-picker-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:10000; display:none; align-items:center; justify-content:center; padding:1rem; }
+.table-picker-overlay.active { display:flex; }
+.table-picker-box { background:white; border-radius:24px; padding:1.8rem 1.6rem; max-width:400px; width:100%; box-shadow:0 30px 70px rgba(0,0,0,0.4); animation: pickerIn 0.25s ease; text-align:center; }
+@keyframes pickerIn { from { transform:scale(0.9); opacity:0; } to { transform:scale(1); opacity:1; } }
+.table-picker-box h2 { font-size:1.15rem; color:#3a2c1c; margin-bottom:0.4rem; display:flex; align-items:center; justify-content:center; gap:8px; }
+.table-picker-box h2 i { color:#c52a1a; }
+.table-picker-box .sub { font-size:0.85rem; color:#8a7a6a; margin-bottom:1.2rem; }
+.table-picker-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:1.2rem; }
+.table-picker-btn { background:#faf6f0; border:2px solid #e3d7cc; color:#3a2c1c; padding:14px 0; border-radius:14px; font-size:1.2rem; font-weight:800; cursor:pointer; transition:all 0.15s; }
+.table-picker-btn:hover { background:#c52a1a; color:white; border-color:#c52a1a; transform:scale(1.05); }
+.table-picker-btn.current { background:#3a2c1c; color:white; border-color:#3a2c1c; cursor:not-allowed; opacity:0.6; }
+.table-picker-cancel { background:#ede0d6; color:#3a2c1c; border:none; padding:12px 20px; border-radius:12px; font-size:0.9rem; font-weight:700; cursor:pointer; width:100%; }
+.table-picker-cancel:hover { background:#ddd0c4; }
+
 @media (max-width:600px) {
   body { padding:0.5rem; }
   .header { padding:1rem; border-radius:16px; }
@@ -118,6 +138,8 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
   .grid { grid-template-columns:1fr; }
   .filter-btn { font-size:0.75rem; padding:6px 10px; }
   .actions button { font-size:0.8rem; padding:9px 6px; }
+  .table-picker-grid { grid-template-columns:repeat(4, 1fr); gap:8px; }
+  .table-picker-btn { padding:12px 0; font-size:1.05rem; }
 }
 </style>
 </head>
@@ -164,6 +186,16 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
   <div class="empty"><i class="fas fa-spinner fa-spin"></i><div>جاري التحميل...</div></div>
 </div>
 
+<!-- ===== نافذة اختيار الطاولة ===== -->
+<div class="table-picker-overlay" id="tablePickerOverlay">
+  <div class="table-picker-box">
+    <h2><i class="fas fa-chair"></i> اختر رقم الطاولة الجديد</h2>
+    <div class="sub" id="pickerSubTitle">الطاولة الحالية: <span id="pickerCurrentTable">-</span></div>
+    <div class="table-picker-grid" id="tablePickerGrid"></div>
+    <button class="table-picker-cancel" onclick="closeTablePicker()">إلغاء</button>
+  </div>
+</div>
+
 <script>
 // =========================================================
 // ===== الإعدادات =====
@@ -176,6 +208,7 @@ let isFirstLoad = true;
 let audioCtx = null;
 const SIXTY_MIN = 60 * 60 * 1000;
 const THIRTY_MIN = 30 * 60 * 1000;
+const TABLE_COUNT = 10;
 
 // =========================================================
 // ===== الاستماع من Firebase =====
@@ -340,7 +373,7 @@ function render() {
                   : o.status === 'confirmed' ? 'مؤكد'
                   : o.status === 'sent' ? 'مُرسل للكاشير' : 'مرفوض';
 
-    // تحذير للطلبات القديمة
+    // تحذير الطلبات القديمة
     let oldWarning = '';
     let isOldSent = false;
     if (o.status === 'sent') {
@@ -351,6 +384,11 @@ function render() {
         oldWarning = '<div class="sent-warning">⚠️ منذ ' + mins + ' دقيقة (يُحذف تلقائيًا)</div>';
       }
     }
+
+    // زر تعديل الطاولة (يظهر فقط للطلبات "جديد")
+    const editBtn = o.status === 'pending'
+      ? '<button class="btn-edit-table" onclick="event.stopPropagation(); openTablePicker(\'' + o.id + '\',' + o.tableNumber + ')" title="تعديل رقم الطاولة"><i class="fas fa-pen"></i></button>'
+      : '';
 
     let actions = '';
     if (o.status === 'pending') {
@@ -374,7 +412,7 @@ function render() {
 
     return '<div class="order-card ' + (o.status === 'pending' ? 'new ' : '') + (isOldSent ? 'old-sent ' : '') + stCls + '">' +
       '<div class="order-head">' +
-        '<div class="order-table"><i class="fas fa-chair"></i> طاولة ' + o.tableNumber + '</div>' +
+        '<div class="order-table"><i class="fas fa-chair"></i> طاولة ' + o.tableNumber + editBtn + '</div>' +
         '<div style="text-align:left">' +
           '<div class="order-time">' + time + '</div>' +
           '<div class="order-time-ago">' + ago + '</div>' +
@@ -394,8 +432,63 @@ function render() {
   }).join('');
 }
 
-// تحديث كل 30 ثانية (للتحذيرات)
 setInterval(() => { if (allOrders.length > 0) render(); }, 30000);
+
+// =========================================================
+// ===== نافذة تعديل الطاولة =====
+// =========================================================
+let pickerOrderId = null;
+let pickerCurrentTable = null;
+
+window.openTablePicker = (orderId, currentTable) => {
+  pickerOrderId = orderId;
+  pickerCurrentTable = Number(currentTable);
+  document.getElementById('pickerCurrentTable').textContent = currentTable;
+
+  const grid = document.getElementById('tablePickerGrid');
+  let html = '';
+  for (let i = 1; i <= TABLE_COUNT; i++) {
+    const isCurrent = i === pickerCurrentTable;
+    html += '<button class="table-picker-btn ' + (isCurrent ? 'current' : '') + '" ' +
+            (isCurrent ? 'disabled' : 'onclick="changeTableNumber(' + i + ')"') + '>' + i + '</button>';
+  }
+  grid.innerHTML = html;
+  document.getElementById('tablePickerOverlay').classList.add('active');
+};
+
+window.closeTablePicker = () => {
+  document.getElementById('tablePickerOverlay').classList.remove('active');
+  pickerOrderId = null;
+  pickerCurrentTable = null;
+};
+
+window.changeTableNumber = async (newTable) => {
+  if (!pickerOrderId) return;
+  if (newTable === pickerCurrentTable) { closeTablePicker(); return; }
+
+  const order = allOrders.find(o => o.id === pickerOrderId);
+  if (!order) { closeTablePicker(); return; }
+
+  try {
+    const { db, ref, update } = window.FB;
+    await update(ref(db, 'customerOrders/' + pickerOrderId), {
+      tableNumber: String(newTable),
+      tableChangedAt: Date.now(),
+      previousTable: pickerCurrentTable
+    });
+    showToast('✅ تم التعديل', 'الطاولة تغيرت من ' + pickerCurrentTable + ' إلى ' + newTable);
+    closeTablePicker();
+  } catch (e) {
+    console.error(e);
+    alert('❌ فشل التعديل. تأكد من الاتصال.');
+    closeTablePicker();
+  }
+};
+
+// إغلاق النافذة عند الضغط خارجها
+document.getElementById('tablePickerOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeTablePicker();
+});
 
 // =========================================================
 // ===== عمليات على الطلبات =====
@@ -445,11 +538,9 @@ window.sendToCashier = async (id) => {
   try {
     const { db, ref, set, get, update } = window.FB;
 
-    // 1) نجيب الطلبات الحالية للطاولات
     const snap = await get(ref(db, 'tableStates'));
     const tableStates = snap.val() || {};
 
-    // 2) نبني محتوى الطلب بصيغة index-v3
     const activeItems = order.items.map(it => ({
       name: it.name,
       desc: '',
@@ -460,7 +551,6 @@ window.sendToCashier = async (id) => {
       category: 'skewers'
     }));
 
-    // 3) نحفظ في tableStates
     tableStates[order.tableNumber] = {
       orders: activeItems,
       notes: order.notes || '',
@@ -475,7 +565,6 @@ window.sendToCashier = async (id) => {
 
     await set(ref(db, 'tableStates'), tableStates);
 
-    // 4) الجلسة
     const sessSnap = await get(ref(db, 'tableSessions'));
     const sessions = sessSnap.val() || {};
     if (!sessions[order.tableNumber]) {
@@ -483,17 +572,13 @@ window.sendToCashier = async (id) => {
       await set(ref(db, 'tableSessions'), sessions);
     }
 
-    // 5) تحديث حالة الطلب
     await update(ref(db, 'customerOrders/' + id), {
       status: 'sent',
       sentAt: Date.now()
     });
 
-    // 6) فتح الكاشير
     window.open('index-v3.html', '_blank');
-
     showToast('✅ تم الإرسال', 'الطاولة ' + order.tableNumber + ' جاهزة في الكاشير');
-
   } catch (e) {
     console.error(e);
     alert('❌ فشل الإرسال. تأكد من الاتصال.');
@@ -535,9 +620,7 @@ async function autoCleanOldSentOrders() {
     const age = now - (o.sentAt || o.createdAt || now);
     return age > SIXTY_MIN;
   });
-
   if (old.length === 0) return;
-
   const { db, ref, remove } = window.FB;
   for (const o of old) {
     try { await remove(ref(db, 'customerOrders/' + o.id)); } catch (e) {}
