@@ -58,6 +58,7 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
 .order-card.confirmed { border-right-color:#1f7b4d; }
 .order-card.sent { border-right-color:#2f8fc2; background:#f4faff; }
 .order-card.rejected { border-right-color:#999; opacity:0.55; }
+.order-card.old-sent { border-right-color:#e6b325; background:#fff8e5; }
 .order-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.8rem; gap:8px; }
 .order-table { background:#c52a1a; color:white; padding:4px 12px; border-radius:40px; font-weight:800; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px; }
 .order-card.sent .order-table { background:#2f8fc2; }
@@ -84,6 +85,10 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
 .btn-reject { background:#dc3545; color:white; }
 .btn-reject:hover { background:#b02a37; }
 .btn-delete { background:#8a7a68; color:white; flex:0 0 44px !important; min-width:44px !important; padding:10px 0 !important; }
+.btn-delivered { background:#1f7b4d; color:white; }
+.btn-delivered:hover { background:#14633b; }
+.btn-resend { background:#2f8fc2; color:white; flex:0 0 44px !important; min-width:44px !important; padding:10px 0 !important; }
+.btn-resend:hover { background:#217aad; }
 
 /* ===== شارات الحالة ===== */
 .status-badge { display:inline-block; padding:3px 10px; border-radius:40px; font-size:0.72rem; font-weight:700; }
@@ -91,13 +96,14 @@ body { background:#f5f0eb; min-height:100vh; padding:1rem; }
 .status-badge.confirmed { background:#d0e6d9; color:#1a6b3f; }
 .status-badge.sent { background:#d4e9f7; color:#1a5b8a; }
 .status-badge.rejected { background:#e9e5e0; color:#999; }
+.sent-warning { display:inline-block; background:#f7e3d4; color:#a55f3a; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:40px; margin-top:4px; }
 
 .empty { grid-column:1/-1; text-align:center; padding:4rem 2rem; color:#a38774; }
 .empty i { font-size:3rem; margin-bottom:1rem; display:block; }
 .empty-msg { font-size:1.1rem; font-weight:700; color:#3a2c1c; margin-bottom:0.4rem; }
 .empty-sub { font-size:0.85rem; }
 
-/* ===== صوت التنبيه ===== */
+/* ===== إشعار منبثق ===== */
 .toast-notification { position:fixed; bottom:20px; right:20px; background:#2c2118; color:white; padding:14px 20px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.3); border-right:5px solid #e6b325; display:flex; align-items:center; gap:12px; z-index:9999; animation: toastIn 0.4s ease; max-width:340px; }
 @keyframes toastIn { from { transform:translateX(30px); opacity:0; } to { transform:translateX(0); opacity:1; } }
 .toast-notification i { color:#e6b325; font-size:1.6rem; }
@@ -168,6 +174,8 @@ let searchQuery = '';
 let knownOrderIds = new Set();
 let isFirstLoad = true;
 let audioCtx = null;
+const SIXTY_MIN = 60 * 60 * 1000;
+const THIRTY_MIN = 30 * 60 * 1000;
 
 // =========================================================
 // ===== الاستماع من Firebase =====
@@ -179,7 +187,6 @@ window.addEventListener('firebase-ready', () => {
     allOrders = Object.entries(data).map(([id, o]) => ({ id, ...o }));
     allOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-    // ===== كشف الطلبات الجديدة =====
     const currentIds = new Set(allOrders.map(o => o.id));
     if (isFirstLoad) {
       knownOrderIds = currentIds;
@@ -206,8 +213,6 @@ function playNewOrderSound() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-
-    // نغمة ثلاثية (بينج-بينج-بينج)
     const notes = [
       { freq: 880, start: 0.0, dur: 0.15 },
       { freq: 1108, start: 0.18, dur: 0.15 },
@@ -252,7 +257,7 @@ function showToast(title, sub) {
 }
 
 // =========================================================
-// ===== رسم الطلبات =====
+// ===== أدوات الوقت =====
 // =========================================================
 function timeAgo(ts) {
   const diff = Math.floor((Date.now() - ts) / 1000);
@@ -262,6 +267,9 @@ function timeAgo(ts) {
   return 'منذ ' + Math.floor(diff / 86400) + ' يوم';
 }
 
+// =========================================================
+// ===== الفلاتر والبحث =====
+// =========================================================
 function applyFilters() {
   searchQuery = (document.getElementById('searchInput').value || '').trim().toLowerCase();
   render();
@@ -289,6 +297,9 @@ function updateCounts() {
   badge.classList.toggle('pulse', c.pending > 0);
 }
 
+// =========================================================
+// ===== رسم الطلبات =====
+// =========================================================
 function render() {
   updateCounts();
   const grid = document.getElementById('ordersGrid');
@@ -329,6 +340,18 @@ function render() {
                   : o.status === 'confirmed' ? 'مؤكد'
                   : o.status === 'sent' ? 'مُرسل للكاشير' : 'مرفوض';
 
+    // تحذير للطلبات القديمة
+    let oldWarning = '';
+    let isOldSent = false;
+    if (o.status === 'sent') {
+      const age = Date.now() - (o.sentAt || o.createdAt || Date.now());
+      if (age > THIRTY_MIN) {
+        isOldSent = true;
+        const mins = Math.floor(age / 60000);
+        oldWarning = '<div class="sent-warning">⚠️ منذ ' + mins + ' دقيقة (يُحذف تلقائيًا)</div>';
+      }
+    }
+
     let actions = '';
     if (o.status === 'pending') {
       actions =
@@ -339,24 +362,24 @@ function render() {
       actions =
         '<button class="btn-send" onclick="sendToCashier(\'' + o.id + '\')" style="flex:2"><i class="fas fa-paper-plane"></i> إرسال للكاشير</button>' +
         '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
-   } else if (o.status === 'sent') {
-  actions =
-    '<button class="btn-delivered" onclick="markDelivered(\'' + o.id + '\')" style="flex:2"><i class="fas fa-check-circle"></i> تم التسليم</button>' +
-    '<button class="btn-resend" onclick="resendToCashier(\'' + o.id + '\')"><i class="fas fa-redo"></i></button>' +
-    '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
-}
+    } else if (o.status === 'sent') {
+      actions =
+        '<button class="btn-delivered" onclick="markDelivered(\'' + o.id + '\')" style="flex:2"><i class="fas fa-check-circle"></i> تم التسليم</button>' +
+        '<button class="btn-resend" onclick="resendToCashier(\'' + o.id + '\')" title="إعادة الإرسال"><i class="fas fa-redo"></i></button>' +
+        '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
     } else {
       actions =
         '<button class="btn-delete" style="flex:1" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i> حذف</button>';
     }
 
-    return '<div class="order-card ' + (o.status === 'pending' ? 'new ' : '') + stCls + '">' +
+    return '<div class="order-card ' + (o.status === 'pending' ? 'new ' : '') + (isOldSent ? 'old-sent ' : '') + stCls + '">' +
       '<div class="order-head">' +
         '<div class="order-table"><i class="fas fa-chair"></i> طاولة ' + o.tableNumber + '</div>' +
         '<div style="text-align:left">' +
           '<div class="order-time">' + time + '</div>' +
           '<div class="order-time-ago">' + ago + '</div>' +
           '<span class="status-badge ' + stCls + '">' + stLabel + '</span>' +
+          oldWarning +
         '</div>' +
       '</div>' +
       '<div class="order-cust">' +
@@ -371,7 +394,7 @@ function render() {
   }).join('');
 }
 
-// تحديث الوقت كل 30 ثانية
+// تحديث كل 30 ثانية (للتحذيرات)
 setInterval(() => { if (allOrders.length > 0) render(); }, 30000);
 
 // =========================================================
@@ -396,12 +419,12 @@ window.deleteOrder = async (id) => {
 };
 
 window.cleanConfirmed = async () => {
-  const confirmed = allOrders.filter(o => o.status === 'confirmed' || o.status === 'rejected');
-  if (confirmed.length === 0) { alert('لا توجد طلبات مؤكدة أو مرفوضة'); return; }
-  if (!confirm('حذف ' + confirmed.length + ' طلب (مؤكد/مرفوض)؟')) return;
+  const list = allOrders.filter(o => o.status === 'confirmed' || o.status === 'rejected');
+  if (list.length === 0) { alert('لا توجد طلبات مؤكدة أو مرفوضة'); return; }
+  if (!confirm('حذف ' + list.length + ' طلب (مؤكد/مرفوض)؟')) return;
   const { db, ref, remove } = window.FB;
-  for (const o of confirmed) {
-    await remove(ref(db, 'customerOrders/' + o.id));
+  for (const o of list) {
+    try { await remove(ref(db, 'customerOrders/' + o.id)); } catch (e) {}
   }
 };
 
@@ -413,9 +436,11 @@ window.sendToCashier = async (id) => {
   if (!order) return;
 
   const btn = event.target.closest('button');
-  const oldHtml = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+  const oldHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+  }
 
   try {
     const { db, ref, set, get, update } = window.FB;
@@ -435,7 +460,7 @@ window.sendToCashier = async (id) => {
       category: 'skewers'
     }));
 
-    // 3) نحفظ في tableStates (نفس البنية اللي يقرأها index-v3)
+    // 3) نحفظ في tableStates
     tableStates[order.tableNumber] = {
       orders: activeItems,
       notes: order.notes || '',
@@ -450,7 +475,7 @@ window.sendToCashier = async (id) => {
 
     await set(ref(db, 'tableStates'), tableStates);
 
-    // 4) نحفظ للجلسة (عشان المؤقت يشتغل)
+    // 4) الجلسة
     const sessSnap = await get(ref(db, 'tableSessions'));
     const sessions = sessSnap.val() || {};
     if (!sessions[order.tableNumber]) {
@@ -458,22 +483,24 @@ window.sendToCashier = async (id) => {
       await set(ref(db, 'tableSessions'), sessions);
     }
 
-    // 5) نحدّث حالة الطلب في admin
+    // 5) تحديث حالة الطلب
     await update(ref(db, 'customerOrders/' + id), {
       status: 'sent',
       sentAt: Date.now()
     });
 
-    // 6) نفتح الكاشير في تاب جديد
+    // 6) فتح الكاشير
     window.open('index-v3.html', '_blank');
 
-    showToast('✅ تم الإرسال', 'الطاولة ' + order.tableNumber + ' صارت جاهزة في الكاشير');
+    showToast('✅ تم الإرسال', 'الطاولة ' + order.tableNumber + ' جاهزة في الكاشير');
 
   } catch (e) {
     console.error(e);
     alert('❌ فشل الإرسال. تأكد من الاتصال.');
-    btn.disabled = false;
-    btn.innerHTML = oldHtml;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = oldHtml;
+    }
   }
 };
 
@@ -483,13 +510,52 @@ window.resendToCashier = async (id) => {
 };
 
 // =========================================================
-// ===== تفعيل الصوت مع أول تفاعل =====
+// ===== زر "تم التسليم" =====
+// =========================================================
+window.markDelivered = async (id) => {
+  const order = allOrders.find(o => o.id === id);
+  if (!order) return;
+  if (!confirm('تأكيد تسليم طلب طاولة ' + order.tableNumber + '؟\nسيتم حذفه من القائمة.')) return;
+  const { db, ref, remove } = window.FB;
+  try {
+    await remove(ref(db, 'customerOrders/' + id));
+    showToast('✅ تم التسليم', 'طاولة ' + order.tableNumber + ' اكتمل طلبها');
+  } catch (e) {
+    alert('❌ فشل الحذف. تأكد من الاتصال.');
+  }
+};
+
+// =========================================================
+// ===== حذف تلقائي بعد 60 دقيقة =====
+// =========================================================
+async function autoCleanOldSentOrders() {
+  const now = Date.now();
+  const old = allOrders.filter(o => {
+    if (o.status !== 'sent') return false;
+    const age = now - (o.sentAt || o.createdAt || now);
+    return age > SIXTY_MIN;
+  });
+
+  if (old.length === 0) return;
+
+  const { db, ref, remove } = window.FB;
+  for (const o of old) {
+    try { await remove(ref(db, 'customerOrders/' + o.id)); } catch (e) {}
+  }
+  if (old.length > 0) {
+    showToast('🧹 تنظيف تلقائي', 'حُذف ' + old.length + ' طلب قديم (60+ دقيقة)');
+  }
+}
+
+setInterval(autoCleanOldSentOrders, 5 * 60 * 1000);
+setTimeout(autoCleanOldSentOrders, 30000);
+
+// =========================================================
+// ===== تفعيل الصوت =====
 // =========================================================
 document.addEventListener('click', function initAudio() {
   if (!audioCtx) {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch (e) {}
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
   }
 }, { once: true });
 
