@@ -416,7 +416,7 @@ window.sendToCashier = async (id) => {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
 
   try {
-    const { db, ref, set, get } = window.FB;
+    const { db, ref, set, get, update } = window.FB;
 
     // 1) نجيب الطلبات الحالية للطاولات
     const snap = await get(ref(db, 'tableStates'));
