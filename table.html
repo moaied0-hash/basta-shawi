@@ -129,11 +129,8 @@ html[dir="ltr"] .brand-text { text-align: left; }
 .qty-ctrl button.minus { background:#8a7a68; }
 .qty-ctrl button:disabled { opacity:0.35; cursor:not-allowed; }
 .qty-ctrl .qty-num { min-width:26px; text-align:center; font-weight:800; font-size:1rem; color:#3a2c1c; }
-
-/* ← التعديل: خيارات الصنف تظهر فقط عند الاختيار */
 .item-options { width:100%; margin-top:6px; padding:6px 10px; border:1px solid #e3d7cc; border-radius:8px; font-size:0.82rem; background:white; display:none; }
 .menu-item.active .item-options { display:block; }
-
 .total-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:3px solid #1a1a1a; padding:0.9rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow:0 -6px 20px rgba(0,0,0,0.1); z-index:200; }
 .total-bar .sum { font-weight:800; color:#3a2c1c; font-size:1.1rem; }
 .total-bar .sum small { display:block; font-size:0.75rem; font-weight:500; color:#8a7a6a; }
@@ -342,7 +339,7 @@ function itemSub(arabicName) {
 }
 
 // =========================================================
-// ===== تطبيق اللغة (مع إعادة بناء القائمة) =====
+// ===== تطبيق اللغة (الترتيب مهم) =====
 // =========================================================
 function applyLanguage() {
   const isAr = LANG === 'ar';
@@ -350,12 +347,13 @@ function applyLanguage() {
   document.documentElement.dir = isAr ? 'rtl' : 'ltr';
   document.title = isAr ? 'بسطة شوي - اطلب من طاولتك' : 'Basta Shawi - Order from your table';
 
-  // الهيدر
+  // ===== 1) بناء القائمة أولاً (لأنها تنشئ HTML جديد) =====
+  buildMenu();
+
+  // ===== 2) تحديث نصوص العناصر الثابتة =====
   document.getElementById('brandTitle').textContent = t('brandTitle');
   document.getElementById('brandSub').textContent = t('brandSub');
   document.getElementById('tableLabel').textContent = t('tableLabel');
-
-  // الواجهة
   document.getElementById('loadingText').textContent = t('loadingText');
   document.getElementById('infoTitle').textContent = t('infoTitle');
   document.getElementById('labelName').textContent = t('labelName');
@@ -366,30 +364,31 @@ function applyLanguage() {
   document.getElementById('orderNotes').placeholder = t('notesPlaceholder');
   document.getElementById('totalLabel').textContent = t('totalLabel');
 
-  // الأزرار
-  document.getElementById('sendBtnText').textContent = t('sendBtnText');
+  // ===== 3) نصوص الأزرار =====
+  const sendSpan = document.getElementById('sendBtnText');
+  if (sendSpan) sendSpan.textContent = t('sendBtnText');
   document.getElementById('successTitle').textContent = t('successTitle');
   document.getElementById('successSub').textContent = t('successSub');
   document.getElementById('successKeep').textContent = t('successKeep');
   document.getElementById('newOrderBtn').textContent = t('newOrderBtn');
 
-  // أزرار اللغة
+  // ===== 4) أزرار اللغة =====
   document.getElementById('btnAr').classList.toggle('active', isAr);
   document.getElementById('btnEn').classList.toggle('active', !isAr);
 
-  // Badge الطاولة
+  // ===== 5) Badge الطاولة =====
   if (!TABLE_NUMBER) {
     document.getElementById('tableBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + t('noTable');
   } else {
     document.getElementById('tableBadge').innerHTML = '<i class="fas fa-chair"></i> ' + t('tableLabel') + ' <span id="tableNumText">' + TABLE_NUMBER + '</span>';
   }
 
-  // ← المهم: إعادة بناء القائمة فورًا
-  buildMenu();
+  // ===== 6) الإجمالي (بعد بناء القائمة) =====
   updateTotal();
 }
 
 function setLang(lang) {
+  if (lang === LANG) return;
   LANG = lang;
   localStorage.setItem('basta_lang', lang);
   applyLanguage();
@@ -430,7 +429,7 @@ let MENU = [
 let cart = {};
 
 // =========================================================
-// ===== بناء القائمة (التعديل الأساسي هنا) =====
+// ===== بناء القائمة =====
 // =========================================================
 function buildMenu() {
   const wrap = document.getElementById('menuList');
@@ -450,7 +449,7 @@ function buildMenu() {
     items.forEach(m => {
       const idx = m._i;
       const q = cart[idx]?.qty || 0;
-      const isActive = q > 0;  // ← فقط عند اختيار الصنف
+      const isActive = q > 0;
       const displayName = itemName(m.name);
       const subName = itemSub(m.name);
 
@@ -459,7 +458,6 @@ function buildMenu() {
           '<div class="menu-item-name">'+displayName+'</div>' +
           (subName ? '<div class="menu-item-name-en">'+subName+'</div>' : '') +
           '<div class="menu-item-price">'+m.price.toFixed(2)+' '+t('currency')+'</div>' +
-          // ← الخيارات تظهر فقط عند active (عبر CSS)
           '<input type="text" class="item-options" placeholder="'+t('optionsPlaceholder')+'" value="'+(cart[idx]?.options||'')+'" onchange="setOptions('+idx+', this.value)" onclick="event.stopPropagation()" />' +
         '</div>' +
         '<div class="qty-ctrl">' +
@@ -482,7 +480,6 @@ function changeQty(idx, delta) {
   if (cart[idx].qty === 0) delete cart[idx];
   const el = document.getElementById('item-'+idx);
   if (el) {
-    // ← التحديث المهم: نضيف/نشيل class active
     el.classList.toggle('active', !!cart[idx] && cart[idx].qty > 0);
     el.querySelector('.qty-num').textContent = cart[idx]?.qty || 0;
     const minus = el.querySelector('.minus');
@@ -504,12 +501,14 @@ function updateTotal() {
     total += MENU[i].price * v.qty;
     count += v.qty;
   });
-  document.getElementById('totalAmount').textContent = total.toFixed(2) + ' ' + t('currency');
-  document.getElementById('sendBtn').disabled = count === 0;
+  const el = document.getElementById('totalAmount');
+  if (el) el.textContent = total.toFixed(2) + ' ' + t('currency');
+  const btn = document.getElementById('sendBtn');
+  if (btn) btn.disabled = count === 0;
 }
 
 // =========================================================
-// ===== تحميل المنيو من Firebase =====
+// ===== Firebase — تحميل المنيو =====
 // =========================================================
 window.addEventListener('firebase-ready', () => {
   const { db, ref, onValue } = window.FB;
@@ -525,7 +524,6 @@ window.addEventListener('firebase-ready', () => {
   });
 });
 
-// fallback لو ما اتصل Firebase
 setTimeout(() => {
   if (document.getElementById('loadingScreen').style.display !== 'none') {
     document.getElementById('loadingScreen').style.display = 'none';
@@ -548,10 +546,10 @@ async function submitOrder() {
   if (!phone || phone.length < 9) { alert(t('alertPhone')); document.getElementById('custPhone').focus(); return; }
   if (Object.keys(cart).length === 0) { alert(t('alertItems')); return; }
 
-  // ← نخزن الاسمين (عربي + إنجليزي)
+  // نخزن الاسمين (عربي + إنجليزي) — admin يقرأ العربي
   const items = Object.entries(cart).map(([i, v]) => ({
-    name: MENU[i].name,                                    // ← عربي دائمًا (للأدمن والكاشير)
-    nameEn: ITEM_TRANSLATIONS[MENU[i].name] || '',         // ← إنجليزي احتياطي
+    name: MENU[i].name,
+    nameEn: ITEM_TRANSLATIONS[MENU[i].name] || '',
     price: MENU[i].price,
     qty: v.qty,
     options: v.options || ''
