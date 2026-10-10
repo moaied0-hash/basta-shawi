@@ -339,10 +339,12 @@ function render() {
       actions =
         '<button class="btn-send" onclick="sendToCashier(\'' + o.id + '\')" style="flex:2"><i class="fas fa-paper-plane"></i> إرسال للكاشير</button>' +
         '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
-    } else if (o.status === 'sent') {
-      actions =
-        '<button class="btn-confirm" onclick="resendToCashier(\'' + o.id + '\')" style="flex:2"><i class="fas fa-redo"></i> إعادة الإرسال</button>' +
-        '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
+   } else if (o.status === 'sent') {
+  actions =
+    '<button class="btn-delivered" onclick="markDelivered(\'' + o.id + '\')" style="flex:2"><i class="fas fa-check-circle"></i> تم التسليم</button>' +
+    '<button class="btn-resend" onclick="resendToCashier(\'' + o.id + '\')"><i class="fas fa-redo"></i></button>' +
+    '<button class="btn-delete" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i></button>';
+}
     } else {
       actions =
         '<button class="btn-delete" style="flex:1" onclick="deleteOrder(\'' + o.id + '\')"><i class="fas fa-trash"></i> حذف</button>';
