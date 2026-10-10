@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="theme-color" content="#c52a1a" />
+<meta name="theme-color" content="#1a1a1a" />
 <title>بسطة شوي - اطلب من طاولتك</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -31,13 +31,76 @@ window.dispatchEvent(new Event('firebase-ready'));
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; -webkit-tap-highlight-color:transparent; }
 body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
 
-/* ===== الهيدر ===== */
-.header { background:linear-gradient(135deg,#c52a1a,#a82214); color:white; padding:1.4rem 1rem 1.2rem; text-align:center; border-radius:0 0 24px 24px; box-shadow:0 6px 20px rgba(197,42,26,0.3); position:sticky; top:0; z-index:100; }
-.brand-logo { width:90px; height:90px; object-fit:contain; margin:0 auto 6px; display:block; filter:drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
-.header h1 { font-size:1.5rem; font-weight:800; letter-spacing:1px; }
-.header .sub { font-size:0.9rem; opacity:0.95; margin-top:6px; font-weight:500; }
-.table-badge { display:inline-flex; align-items:center; gap:6px; background:white; color:#c52a1a; font-weight:800; padding:6px 20px; border-radius:40px; margin-top:10px; font-size:1rem; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+/* ===== الهيدر الداكن ===== */
+.header { 
+  background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 50%, #555 100%);
+  color: white; 
+  padding: 1.4rem 1rem 1.2rem; 
+  text-align: center; 
+  border-radius: 0 0 24px 24px; 
+  box-shadow: 0 6px 24px rgba(0,0,0,0.4); 
+  position: sticky; 
+  top: 0; 
+  z-index: 100; 
+}
+.header-brand { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 14px; 
+  flex-wrap: wrap; 
+  margin-bottom: 10px;
+}
+.brand-logo { 
+  width: 80px; 
+  height: 80px; 
+  object-fit: cover; 
+  background: #000; 
+  border-radius: 50%; 
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  flex-shrink: 0;
+  border: 2px solid #555;
+}
+.brand-text { text-align: right; }
+.brand-text h1 { 
+  font-size: 1.45rem; 
+  font-weight: 800; 
+  color: #fff; 
+  letter-spacing: 0.5px; 
+  line-height: 1.2;
+}
+.brand-text .sub { 
+  font-size: 0.95rem; 
+  color: #ddd; 
+  margin-top: 4px; 
+  font-weight: 500; 
+  line-height: 1.2;
+}
+.brand-text .brand-en { 
+  font-size: 0.72rem; 
+  color: #aaa; 
+  margin-top: 4px; 
+  letter-spacing: 3px; 
+  font-weight: 500;
+  font-family: 'Segoe UI', sans-serif;
+}
+.table-badge { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px; 
+  background: white; 
+  color: #1a1a1a; 
+  font-weight: 800; 
+  padding: 6px 20px; 
+  border-radius: 40px; 
+  margin-top: 10px; 
+  font-size: 1rem; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
+}
+.table-badge i { color: #c52a1a; }
 
+/* ===== المحتوى ===== */
 .wrap { max-width:600px; margin:1rem auto; padding:0 1rem; }
 .card { background:white; border-radius:20px; padding:1.4rem; box-shadow:0 6px 20px -8px rgba(0,0,0,0.12); margin-bottom:1rem; }
 .card h2 { font-size:1.1rem; color:#3a2c1c; margin-bottom:1rem; display:flex; align-items:center; gap:8px; }
@@ -60,7 +123,7 @@ body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
 .qty-ctrl .qty-num { min-width:26px; text-align:center; font-weight:800; font-size:1rem; color:#3a2c1c; }
 .item-options { width:100%; margin-top:6px; padding:6px 10px; border:1px solid #e3d7cc; border-radius:8px; font-size:0.82rem; background:white; display:none; }
 .menu-item.active .item-options { display:block; }
-.total-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:3px solid #c52a1a; padding:0.9rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow:0 -6px 20px rgba(0,0,0,0.1); z-index:200; }
+.total-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:3px solid #1a1a1a; padding:0.9rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow:0 -6px 20px rgba(0,0,0,0.1); z-index:200; }
 .total-bar .sum { font-weight:800; color:#3a2c1c; font-size:1.1rem; }
 .total-bar .sum small { display:block; font-size:0.75rem; font-weight:500; color:#8a7a6a; }
 .total-bar .sum span { color:#c52a1a; }
@@ -71,16 +134,28 @@ body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
 .success-screen h2 { color:#1f7b4d; margin-bottom:0.5rem; }
 .success-screen p { color:#5a4a3a; margin-bottom:0.4rem; }
 .success-screen .order-num { display:inline-block; background:#faf6f0; border:2px dashed #c52a1a; color:#c52a1a; font-size:1.5rem; font-weight:900; padding:8px 24px; border-radius:16px; margin:1rem 0; }
-.new-order-btn { background:#c52a1a; color:white; border:none; padding:12px 30px; border-radius:40px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:1rem; }
+.new-order-btn { background:#1a1a1a; color:white; border:none; padding:12px 30px; border-radius:40px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:1rem; }
 .loading { text-align:center; padding:3rem; color:#8a7a6a; }
+
+@media (max-width: 400px) {
+  .brand-logo { width:68px; height:68px; }
+  .brand-text h1 { font-size:1.25rem; }
+  .brand-text .sub { font-size:0.85rem; }
+  .brand-text .brand-en { font-size:0.68rem; letter-spacing:2px; }
+}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <img src="logo.png" alt="بسطة شوي" class="brand-logo" />
-  <h1>بسطة شوي</h1>
-  <div class="sub">للمأكولات الشعبية</div>
+  <div class="header-brand">
+    <img src="logo.png" alt="بسطة شوي" class="brand-logo" />
+    <div class="brand-text">
+      <h1>بسطة شوي</h1>
+      <div class="sub">للمأكولات الشعبية</div>
+      <div class="brand-en">bastatshawi</div>
+    </div>
+  </div>
   <div class="table-badge" id="tableBadge">
     <i class="fas fa-chair"></i> طاولة <span id="tableNumText">...</span>
   </div>
