@@ -29,7 +29,7 @@ window.dispatchEvent(new Event('firebase-ready'));
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; -webkit-tap-highlight-color:transparent; }
-body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; transition: direction 0.2s; }
+body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
 
 /* ===== شريط اللغة ===== */
 .lang-bar { background:#0f0f0f; padding:8px 16px; display:flex; justify-content:center; align-items:center; gap:8px; border-radius:0 0 16px 16px; }
@@ -38,7 +38,7 @@ body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; transition: di
 .lang-btn.active { background:white; color:#1a1a1a; border-color:white; }
 .lang-btn i { font-size:0.9rem; }
 
-/* ===== الهيدر الداكن ===== */
+/* ===== الهيدر ===== */
 .header { 
   background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 50%, #555 100%);
   color: white; 
@@ -129,8 +129,11 @@ html[dir="ltr"] .brand-text { text-align: left; }
 .qty-ctrl button.minus { background:#8a7a68; }
 .qty-ctrl button:disabled { opacity:0.35; cursor:not-allowed; }
 .qty-ctrl .qty-num { min-width:26px; text-align:center; font-weight:800; font-size:1rem; color:#3a2c1c; }
+
+/* ← التعديل: خيارات الصنف تظهر فقط عند الاختيار */
 .item-options { width:100%; margin-top:6px; padding:6px 10px; border:1px solid #e3d7cc; border-radius:8px; font-size:0.82rem; background:white; display:none; }
 .menu-item.active .item-options { display:block; }
+
 .total-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:3px solid #1a1a1a; padding:0.9rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow:0 -6px 20px rgba(0,0,0,0.1); z-index:200; }
 .total-bar .sum { font-weight:800; color:#3a2c1c; font-size:1.1rem; }
 .total-bar .sum small { display:block; font-size:0.75rem; font-weight:500; color:#8a7a6a; }
@@ -155,7 +158,6 @@ html[dir="ltr"] .brand-text { text-align: left; }
 </head>
 <body>
 
-<!-- شريط اللغة -->
 <div class="lang-bar">
   <button class="lang-btn" id="btnAr" onclick="setLang('ar')">
     <i class="fas fa-flag"></i> عربي
@@ -306,7 +308,6 @@ const TRANSLATIONS = {
   }
 };
 
-// ===== ترجمة الأصناف =====
 const ITEM_TRANSLATIONS = {
   'سيخ اوصال لحم': 'Meat Skewers',
   'سيخ اوصال دجاج': 'Chicken Skewers',
@@ -336,21 +337,25 @@ function itemName(arabicName) {
   return arabicName;
 }
 function itemSub(arabicName) {
-  // في الوضع الإنجليزي، نعرض العربي تحت الإنجليزي
   if (LANG === 'en' && ITEM_TRANSLATIONS[arabicName]) return arabicName;
-  // في الوضع العربي، ما نعرض شيء إضافي
   return '';
 }
 
+// =========================================================
+// ===== تطبيق اللغة (مع إعادة بناء القائمة) =====
+// =========================================================
 function applyLanguage() {
   const isAr = LANG === 'ar';
   document.documentElement.lang = LANG;
   document.documentElement.dir = isAr ? 'rtl' : 'ltr';
   document.title = isAr ? 'بسطة شوي - اطلب من طاولتك' : 'Basta Shawi - Order from your table';
 
+  // الهيدر
   document.getElementById('brandTitle').textContent = t('brandTitle');
   document.getElementById('brandSub').textContent = t('brandSub');
   document.getElementById('tableLabel').textContent = t('tableLabel');
+
+  // الواجهة
   document.getElementById('loadingText').textContent = t('loadingText');
   document.getElementById('infoTitle').textContent = t('infoTitle');
   document.getElementById('labelName').textContent = t('labelName');
@@ -360,6 +365,8 @@ function applyLanguage() {
   document.getElementById('notesTitle').textContent = t('notesTitle');
   document.getElementById('orderNotes').placeholder = t('notesPlaceholder');
   document.getElementById('totalLabel').textContent = t('totalLabel');
+
+  // الأزرار
   document.getElementById('sendBtnText').textContent = t('sendBtnText');
   document.getElementById('successTitle').textContent = t('successTitle');
   document.getElementById('successSub').textContent = t('successSub');
@@ -370,16 +377,16 @@ function applyLanguage() {
   document.getElementById('btnAr').classList.toggle('active', isAr);
   document.getElementById('btnEn').classList.toggle('active', !isAr);
 
-  // إعادة رسم القائمة والأسعار
-  buildMenu();
-  updateTotal();
-
   // Badge الطاولة
   if (!TABLE_NUMBER) {
     document.getElementById('tableBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + t('noTable');
   } else {
     document.getElementById('tableBadge').innerHTML = '<i class="fas fa-chair"></i> ' + t('tableLabel') + ' <span id="tableNumText">' + TABLE_NUMBER + '</span>';
   }
+
+  // ← المهم: إعادة بناء القائمة فورًا
+  buildMenu();
+  updateTotal();
 }
 
 function setLang(lang) {
@@ -393,7 +400,6 @@ function setLang(lang) {
 // =========================================================
 const params = new URLSearchParams(location.search);
 let TABLE_NUMBER = params.get('t') || params.get('table') || null;
-if (TABLE_NUMBER) document.getElementById('tableNumText').textContent = TABLE_NUMBER;
 
 // =========================================================
 // ===== المنيو =====
@@ -423,31 +429,12 @@ let MENU = [
 
 let cart = {};
 
-window.addEventListener('firebase-ready', () => {
-  const { db, ref, onValue } = window.FB;
-  onValue(ref(db, 'menuItems'), (snap) => {
-    const data = snap.val();
-    if (data && Array.isArray(data) && data.length > 0) {
-      MENU = data.map(x => ({ name:x.name, price:x.price, category:x.category || 'skewers' }));
-    }
-    buildMenu();
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('orderForm').style.display = '';
-    document.getElementById('totalBar').style.display = 'flex';
-  });
-});
-
-setTimeout(() => {
-  if (document.getElementById('loadingScreen').style.display !== 'none') {
-    buildMenu();
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('orderForm').style.display = '';
-    document.getElementById('totalBar').style.display = 'flex';
-  }
-}, 4000);
-
+// =========================================================
+// ===== بناء القائمة (التعديل الأساسي هنا) =====
+// =========================================================
 function buildMenu() {
   const wrap = document.getElementById('menuList');
+  if (!wrap) return;
   const cats = ['skewers','plates','sides','drinks'];
   const catNames = {
     skewers: t('catSkewers'),
@@ -463,13 +450,16 @@ function buildMenu() {
     items.forEach(m => {
       const idx = m._i;
       const q = cart[idx]?.qty || 0;
+      const isActive = q > 0;  // ← فقط عند اختيار الصنف
       const displayName = itemName(m.name);
       const subName = itemSub(m.name);
-      html += '<div class="menu-item" id="item-'+idx+'">' +
+
+      html += '<div class="menu-item' + (isActive ? ' active' : '') + '" id="item-'+idx+'">' +
         '<div class="menu-item-info">' +
           '<div class="menu-item-name">'+displayName+'</div>' +
           (subName ? '<div class="menu-item-name-en">'+subName+'</div>' : '') +
           '<div class="menu-item-price">'+m.price.toFixed(2)+' '+t('currency')+'</div>' +
+          // ← الخيارات تظهر فقط عند active (عبر CSS)
           '<input type="text" class="item-options" placeholder="'+t('optionsPlaceholder')+'" value="'+(cart[idx]?.options||'')+'" onchange="setOptions('+idx+', this.value)" onclick="event.stopPropagation()" />' +
         '</div>' +
         '<div class="qty-ctrl">' +
@@ -483,13 +473,17 @@ function buildMenu() {
   wrap.innerHTML = html;
 }
 
+// =========================================================
+// ===== تغيير الكمية =====
+// =========================================================
 function changeQty(idx, delta) {
   if (!cart[idx]) cart[idx] = { qty:0, options:'' };
   cart[idx].qty = Math.max(0, cart[idx].qty + delta);
   if (cart[idx].qty === 0) delete cart[idx];
   const el = document.getElementById('item-'+idx);
   if (el) {
-    el.classList.toggle('active', !!cart[idx]);
+    // ← التحديث المهم: نضيف/نشيل class active
+    el.classList.toggle('active', !!cart[idx] && cart[idx].qty > 0);
     el.querySelector('.qty-num').textContent = cart[idx]?.qty || 0;
     const minus = el.querySelector('.minus');
     if (minus) minus.disabled = !cart[idx] || cart[idx].qty === 0;
@@ -514,6 +508,36 @@ function updateTotal() {
   document.getElementById('sendBtn').disabled = count === 0;
 }
 
+// =========================================================
+// ===== تحميل المنيو من Firebase =====
+// =========================================================
+window.addEventListener('firebase-ready', () => {
+  const { db, ref, onValue } = window.FB;
+  onValue(ref(db, 'menuItems'), (snap) => {
+    const data = snap.val();
+    if (data && Array.isArray(data) && data.length > 0) {
+      MENU = data.map(x => ({ name:x.name, price:x.price, category:x.category || 'skewers' }));
+    }
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('orderForm').style.display = '';
+    document.getElementById('totalBar').style.display = 'flex';
+    applyLanguage();
+  });
+});
+
+// fallback لو ما اتصل Firebase
+setTimeout(() => {
+  if (document.getElementById('loadingScreen').style.display !== 'none') {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('orderForm').style.display = '';
+    document.getElementById('totalBar').style.display = 'flex';
+    applyLanguage();
+  }
+}, 4000);
+
+// =========================================================
+// ===== إرسال الطلب =====
+// =========================================================
 async function submitOrder() {
   if (!TABLE_NUMBER) { alert(t('alertTable')); return; }
   const name = document.getElementById('custName').value.trim();
@@ -524,9 +548,10 @@ async function submitOrder() {
   if (!phone || phone.length < 9) { alert(t('alertPhone')); document.getElementById('custPhone').focus(); return; }
   if (Object.keys(cart).length === 0) { alert(t('alertItems')); return; }
 
+  // ← نخزن الاسمين (عربي + إنجليزي)
   const items = Object.entries(cart).map(([i, v]) => ({
-    name: MENU[i].name,
-    nameEn: ITEM_TRANSLATIONS[MENU[i].name] || '',
+    name: MENU[i].name,                                    // ← عربي دائمًا (للأدمن والكاشير)
+    nameEn: ITEM_TRANSLATIONS[MENU[i].name] || '',         // ← إنجليزي احتياطي
     price: MENU[i].price,
     qty: v.qty,
     options: v.options || ''
@@ -535,6 +560,7 @@ async function submitOrder() {
 
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
+  const originalBtnHTML = btn.innerHTML;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + t('sendingText');
 
   try {
@@ -563,7 +589,7 @@ async function submitOrder() {
     console.error(e);
     alert(t('alertError'));
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + t('sendBtnText');
+    btn.innerHTML = originalBtnHTML;
   }
 }
 
@@ -581,7 +607,7 @@ function resetOrder() {
   window.scrollTo(0, 0);
 }
 
-// تطبيق اللغة عند التحميل
+// ===== تشغيل أولي =====
 applyLanguage();
 </script>
 </body>
