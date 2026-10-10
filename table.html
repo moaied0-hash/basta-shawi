@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#c52a1a" />
+<title>بسطة شوي - اطلب من طاولتك</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, push, update, onValue, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCa22I08mvNFWG37agpoxxvc1kwz_YeuiY",
+    authDomain: "basta-shawi.firebaseapp.com",
+    databaseURL: "https://basta-shawi-default-rtdb.firebaseio.com",
+    projectId: "basta-shawi",
+    storageBucket: "basta-shawi.firebasestorage.app",
+    messagingSenderId: "673586673644",
+    appId: "1:673586673644:web:f3ba825a03708606d472c9"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+window.FB = { db, ref, set, push, update, onValue, serverTimestamp };
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; -webkit-tap-highlight-color:transparent; }
+body { background:#f5f0eb; min-height:100vh; padding:0 0 100px 0; }
+.header { background:linear-gradient(135deg,#c52a1a,#a82214); color:white; padding:1.2rem 1rem; text-align:center; border-radius:0 0 24px 24px; box-shadow:0 6px 20px rgba(197,42,26,0.3); position:sticky; top:0; z-index:100; }
+.header h1 { font-size:1.3rem; display:flex; align-items:center; justify-content:center; gap:8px; }
+.header .sub { font-size:0.85rem; opacity:0.9; margin-top:4px; }
+.table-badge { display:inline-block; background:white; color:#c52a1a; font-weight:800; padding:4px 16px; border-radius:40px; margin-top:8px; font-size:1rem; }
+.wrap { max-width:600px; margin:1rem auto; padding:0 1rem; }
+.card { background:white; border-radius:20px; padding:1.4rem; box-shadow:0 6px 20px -8px rgba(0,0,0,0.12); margin-bottom:1rem; }
+.card h2 { font-size:1.1rem; color:#3a2c1c; margin-bottom:1rem; display:flex; align-items:center; gap:8px; }
+.card h2 i { color:#c52a1a; }
+.field { margin-bottom:0.9rem; }
+.field label { display:block; font-size:0.85rem; font-weight:600; color:#5a4a3a; margin-bottom:5px; }
+.field input, .field textarea { width:100%; padding:12px 14px; border:2px solid #e3d7cc; border-radius:12px; font-size:1rem; background:#fefcf9; font-family:inherit; }
+.field input:focus, .field textarea:focus { outline:none; border-color:#c52a1a; }
+.field textarea { resize:vertical; min-height:70px; }
+.cat-title { font-size:0.95rem; font-weight:800; color:#3a2c1c; margin:1.2rem 0 0.6rem; display:flex; align-items:center; gap:8px; }
+.cat-title i { color:#e0812f; }
+.menu-item { display:flex; align-items:center; justify-content:space-between; background:#faf6f0; border:1px solid #ede3da; border-radius:14px; padding:0.8rem 0.9rem; margin-bottom:8px; gap:10px; }
+.menu-item-info { flex:1; min-width:0; }
+.menu-item-name { font-weight:700; color:#3a2c1c; font-size:0.95rem; }
+.menu-item-price { font-size:0.85rem; color:#1a6faf; font-weight:600; margin-top:2px; }
+.qty-ctrl { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.qty-ctrl button { width:32px; height:32px; border-radius:50%; border:none; background:#c52a1a; color:white; font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.qty-ctrl button.minus { background:#8a7a68; }
+.qty-ctrl button:disabled { opacity:0.35; cursor:not-allowed; }
+.qty-ctrl .qty-num { min-width:26px; text-align:center; font-weight:800; font-size:1rem; color:#3a2c1c; }
+.item-options { width:100%; margin-top:6px; padding:6px 10px; border:1px solid #e3d7cc; border-radius:8px; font-size:0.82rem; background:white; display:none; }
+.menu-item.active .item-options { display:block; }
+.total-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:3px solid #c52a1a; padding:0.9rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow:0 -6px 20px rgba(0,0,0,0.1); z-index:200; }
+.total-bar .sum { font-weight:800; color:#3a2c1c; font-size:1.1rem; }
+.total-bar .sum small { display:block; font-size:0.75rem; font-weight:500; color:#8a7a6a; }
+.total-bar .sum span { color:#c52a1a; }
+.send-btn { background:#1f7b4d; color:white; border:none; padding:12px 24px; border-radius:40px; font-size:1rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; }
+.send-btn:disabled { background:#aaa; cursor:not-allowed; }
+.success-screen { text-align:center; padding:3rem 1.5rem; }
+.success-screen .icon { font-size:5rem; color:#1f7b4d; margin-bottom:1rem; }
+.success-screen h2 { color:#1f7b4d; margin-bottom:0.5rem; }
+.success-screen p { color:#5a4a3a; margin-bottom:0.4rem; }
+.success-screen .order-num { display:inline-block; background:#faf6f0; border:2px dashed #c52a1a; color:#c52a1a; font-size:1.5rem; font-weight:900; padding:8px 24px; border-radius:16px; margin:1rem 0; }
+.new-order-btn { background:#c52a1a; color:white; border:none; padding:12px 30px; border-radius:40px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:1rem; }
+.loading { text-align:center; padding:3rem; color:#8a7a6a; }
+.empty-cart { text-align:center; padding:2rem; color:#aaa; font-size:0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><i class="fas fa-fire"></i> بسطة شوي</h1>
+  <div class="sub">مشويات وكباب · بن علي</div>
+  <div class="table-badge" id="tableBadge">
+    <i class="fas fa-chair"></i> طاولة <span id="tableNumText">...</span>
+  </div>
+</div>
+
+<div class="wrap" id="mainWrap">
+  <div id="loadingScreen" class="loading">
+    <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
+    <p style="margin-top:1rem;">جاري التحميل...</p>
+  </div>
+
+  <div id="orderForm" style="display:none;">
+    <!-- بيانات الزبون -->
+    <div class="card">
+      <h2><i class="fas fa-user"></i> بياناتك</h2>
+      <div class="field">
+        <label>الاسم *</label>
+        <input type="text" id="custName" placeholder="مثال: أبو فهد" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label>رقم الجوال *</label>
+        <input type="tel" id="custPhone" placeholder="05xxxxxxxx" inputmode="numeric" autocomplete="tel" />
+      </div>
+    </div>
+
+    <!-- المنيو -->
+    <div class="card">
+      <h2><i class="fas fa-utensils"></i> اختر طلبك</h2>
+      <div id="menuList"></div>
+    </div>
+
+    <!-- ملاحظات -->
+    <div class="card">
+      <h2><i class="fas fa-sticky-note"></i> ملاحظات (اختياري)</h2>
+      <div class="field">
+        <textarea id="orderNotes" placeholder="مثال: بدون بصل، زيادة صوص..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div id="successScreen" class="success-screen" style="display:none;">
+    <div class="icon"><i class="fas fa-check-circle"></i></div>
+    <h2>تم استلام طلبك!</h2>
+    <p>سيقوم الموظف بتأكيد طلبك قريبًا</p>
+    <div class="order-num" id="successOrderNo">#0</div>
+    <p style="font-size:0.85rem; color:#8a7a6a;">احتفظ برقم الطلب للمتابعة</p>
+    <button class="new-order-btn" onclick="resetOrder()">
+      <i class="fas fa-plus"></i> طلب جديد
+    </button>
+  </div>
+</div>
+
+<!-- شريط الإجمالي + إرسال -->
+<div class="total-bar" id="totalBar" style="display:none;">
+  <div class="sum">
+    <small>الإجمالي</small>
+    <span id="totalAmount">0.00 ر.س</span>
+  </div>
+  <button class="send-btn" id="sendBtn" onclick="submitOrder()">
+    <i class="fas fa-paper-plane"></i> إرسال الطلب
+  </button>
+</div>
+
+<script>
+// ===== قراءة رقم الطاولة من الرابط =====
+const params = new URLSearchParams(location.search);
+let TABLE_NUMBER = params.get('t') || params.get('table') || null;
+if (!TABLE_NUMBER) {
+  document.getElementById('tableBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> لم يتم تحديد الطاولة';
+} else {
+  document.getElementById('tableNumText').textContent = TABLE_NUMBER;
+}
+
+// ===== المنيو (نفس ترتيب index-v3) =====
+let MENU = [
+  { name:'سيخ اوصال لحم', price:6, category:'skewers' },
+  { name:'سيخ اوصال دجاج', price:6, category:'skewers' },
+  { name:'سيخ كباب لحم', price:6, category:'skewers' },
+  { name:'سيخ كباب دجاج', price:6, category:'skewers' },
+  { name:'سيخ اجنحة دجاج', price:6, category:'skewers' },
+  { name:'سيخ دجاج بالعظم', price:7, category:'skewers' },
+  { name:'سيخ كبدة', price:7, category:'skewers' },
+  { name:'سيخ ربيان مشوي', price:8, category:'skewers' },
+  { name:'صحن ريش غنم', price:55, category:'plates' },
+  { name:'صحن ستيك', price:45, category:'plates' },
+  { name:'سيخ اوصال لحم (غنم)', price:10, category:'skewers' },
+  { name:'صحن بطاطس', price:8, category:'sides' },
+  { name:'صحن حمص', price:9, category:'sides' },
+  { name:'شوربة', price:7, category:'sides' },
+  { name:'مشروبات غازية', price:3, category:'drinks' },
+  { name:'شربت', price:5, category:'drinks' },
+  { name:'سن توب', price:2, category:'drinks' },
+  { name:'سن كولا', price:2, category:'drinks' },
+  { name:'مياه', price:1, category:'drinks' },
+  { name:'عصير برتقال طبيعي', price:9, category:'drinks' }
+];
+
+const CAT_NAMES = { skewers:'🔥 الأسياخ', plates:'🍽️ الأطباق', sides:'🥗 الجانبية', drinks:'🥤 المشروبات' };
+let cart = {}; // { index: { qty, options } }
+
+// ===== تحميل المنيو من Firebase (لو محدّث في index-v3) =====
+window.addEventListener('firebase-ready', () => {
+  const { db, ref, onValue } = window.FB;
+  onValue(ref(db, 'menuItems'), (snap) => {
+    const data = snap.val();
+    if (data && Array.isArray(data) && data.length > 0) {
+      MENU = data.map(x => ({ name:x.name, price:x.price, category:x.category || 'skewers' }));
+    }
+    buildMenu();
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('orderForm').style.display = '';
+    document.getElementById('totalBar').style.display = 'flex';
+  });
+});
+
+// fallback لو ما اتصل Firebase
+setTimeout(() => {
+  if (document.getElementById('loadingScreen').style.display !== 'none') {
+    buildMenu();
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('orderForm').style.display = '';
+    document.getElementById('totalBar').style.display = 'flex';
+  }
+}, 4000);
+
+function buildMenu() {
+  const wrap = document.getElementById('menuList');
+  const cats = ['skewers','plates','sides','drinks'];
+  let html = '';
+  cats.forEach(c => {
+    const items = MENU.map((m, i) => ({...m, _i:i})).filter(m => m.category === c);
+    if (items.length === 0) return;
+    html += '<div class="cat-title">' + CAT_NAMES[c] + '</div>';
+    items.forEach(m => {
+      const idx = m._i;
+      const q = cart[idx]?.qty || 0;
+      html += '<div class="menu-item" id="item-'+idx+'">' +
+        '<div class="menu-item-info">' +
+          '<div class="menu-item-name">'+m.name+'</div>' +
+          '<div class="menu-item-price">'+m.price.toFixed(2)+' ر.س</div>' +
+          '<input type="text" class="item-options" placeholder="خيارات (اختياري)" value="'+(cart[idx]?.options||'')+'" onchange="setOptions('+idx+', this.value)" onclick="event.stopPropagation()" />' +
+        '</div>' +
+        '<div class="qty-ctrl">' +
+          '<button class="minus" '+(q===0?'disabled':'')+' onclick="changeQty('+idx+',-1)"><i class="fas fa-minus"></i></button>' +
+          '<span class="qty-num">'+q+'</span>' +
+          '<button onclick="changeQty('+idx+',1)"><i class="fas fa-plus"></i></button>' +
+        '</div>' +
+      '</div>';
+    });
+  });
+  wrap.innerHTML = html;
+}
+
+function changeQty(idx, delta) {
+  if (!cart[idx]) cart[idx] = { qty:0, options:'' };
+  cart[idx].qty = Math.max(0, cart[idx].qty + delta);
+  if (cart[idx].qty === 0) delete cart[idx];
+  const el = document.getElementById('item-'+idx);
+  if (el) {
+    el.classList.toggle('active', !!cart[idx]);
+    el.querySelector('.qty-num').textContent = cart[idx]?.qty || 0;
+    const minus = el.querySelector('.minus');
+    if (minus) minus.disabled = !cart[idx] || cart[idx].qty === 0;
+    const optInput = el.querySelector('.item-options');
+    if (optInput && cart[idx]) optInput.value = cart[idx].options || '';
+  }
+  updateTotal();
+}
+
+function setOptions(idx, val) {
+  if (!cart[idx]) return;
+  cart[idx].options = val.trim();
+}
+
+function updateTotal() {
+  let total = 0, count = 0;
+  Object.entries(cart).forEach(([i, v]) => {
+    total += MENU[i].price * v.qty;
+    count += v.qty;
+  });
+  document.getElementById('totalAmount').textContent = total.toFixed(2) + ' ر.س';
+  document.getElementById('sendBtn').disabled = count === 0;
+}
+
+async function submitOrder() {
+  if (!TABLE_NUMBER) { alert('⚠️ لم يتم تحديد رقم الطاولة'); return; }
+  const name = document.getElementById('custName').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
+  const notes = document.getElementById('orderNotes').value.trim();
+
+  if (!name) { alert('⚠️ أدخل اسمك'); document.getElementById('custName').focus(); return; }
+  if (!phone || phone.length < 9) { alert('⚠️ أدخل رقم جوال صحيح'); document.getElementById('custPhone').focus(); return; }
+  if (Object.keys(cart).length === 0) { alert('⚠️ اختر صنف واحد على الأقل'); return; }
+
+  const items = Object.entries(cart).map(([i, v]) => ({
+    name: MENU[i].name,
+    price: MENU[i].price,
+    qty: v.qty,
+    options: v.options || ''
+  }));
+  const total = items.reduce((s, x) => s + x.price * x.qty, 0);
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+
+  try {
+    const { db, ref, push, set, serverTimestamp } = window.FB;
+    const newRef = push(ref(db, 'customerOrders'));
+    const orderId = newRef.key;
+    await set(newRef, {
+      tableNumber: TABLE_NUMBER,
+      customerName: name,
+      customerPhone: phone,
+      notes: notes,
+      items: items,
+      total: +total.toFixed(2),
+      status: 'pending',
+      createdAt: Date.now(),
+      createdAtISO: new Date().toISOString()
+    });
+
+    // عرض شاشة النجاح
+    document.getElementById('orderForm').style.display = 'none';
+    document.getElementById('totalBar').style.display = 'none';
+    document.getElementById('successOrderNo').textContent = '#' + orderId.slice(-6).toUpperCase();
+    document.getElementById('successScreen').style.display = '';
+    window.scrollTo(0, 0);
+  } catch (e) {
+    console.error(e);
+    alert('❌ فشل إرسال الطلب. تأكد من الاتصال بالإنترنت.');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
+  }
+}
+
+function resetOrder() {
+  cart = {};
+  document.getElementById('custName').value = '';
+  document.getElementById('custPhone').value = '';
+  document.getElementById('orderNotes').value = '';
+  document.getElementById('successScreen').style.display = 'none';
+  document.getElementById('orderForm').style.display = '';
+  document.getElementById('totalBar').style.display = 'flex';
+  document.getElementById('sendBtn').innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
+  buildMenu();
+  updateTotal();
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>

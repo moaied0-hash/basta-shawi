@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>طلبات الزبائن - بسطة شوي</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue, update, remove }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+const firebaseConfig = {
+    apiKey: "AIzaSyCa22I08mvNFWG37agpoxxvc1kwz_YeuiY",
+    authDomain: "basta-shawi.firebaseapp.com",
+    databaseURL: "https://basta-shawi-default-rtdb.firebaseio.com",
+    projectId: "basta-shawi",
+    storageBucket: "basta-shawi.firebasestorage.app",
+    messagingSenderId: "673586673644",
+    appId: "1:673586673644:web:f3ba825a03708606d472c9"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+window.FB = { db, ref, onValue, update, remove };
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
+body { background:#f5f0eb; min-height:100vh; padding:1rem; }
+.header { max-width:1200px; margin:0 auto 1rem; background:linear-gradient(135deg,#c52a1a,#a82214); color:white; padding:1.2rem; border-radius:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; }
+.header h1 { font-size:1.4rem; display:flex; align-items:center; gap:10px; }
+.badge { background:white; color:#c52a1a; padding:4px 14px; border-radius:40px; font-weight:800; font-size:0.9rem; }
+.grid { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; }
+.order-card { background:white; border-radius:18px; padding:1.2rem; box-shadow:0 6px 20px -8px rgba(0,0,0,0.12); border-right:5px solid #e6b325; }
+.order-card.confirmed { border-right-color:#1f7b4d; opacity:0.7; }
+.order-card.rejected { border-right-color:#999; opacity:0.5; }
+.order-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.8rem; gap:8px; }
+.order-table { background:#c52a1a; color:white; padding:4px 12px; border-radius:40px; font-weight:800; font-size:0.85rem; }
+.order-time { font-size:0.75rem; color:#8a7a6a; }
+.order-cust { background:#faf6f0; padding:0.7rem; border-radius:10px; margin-bottom:0.8rem; font-size:0.88rem; }
+.order-cust div { margin:2px 0; }
+.order-cust i { color:#c52a1a; width:16px; }
+.order-items { font-size:0.85rem; margin-bottom:0.8rem; }
+.order-item-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #eee; }
+.order-item-row:last-child { border-bottom:none; }
+.order-options-line { font-size:0.75rem; color:#8a7a6a; margin-right:8px; }
+.order-total { display:flex; justify-content:space-between; font-weight:800; font-size:1rem; padding:0.7rem 0; border-top:2px solid #f0e6da; margin-bottom:0.8rem; }
+.order-total span:last-child { color:#c52a1a; }
+.actions { display:flex; gap:8px; }
+.actions button { flex:1; padding:10px; border:none; border-radius:10px; font-weight:700; font-size:0.9rem; cursor:pointer; }
+.btn-confirm { background:#1f7b4d; color:white; }
+.btn-reject { background:#dc3545; color:white; }
+.btn-delete { background:#8a7a68; color:white; flex:0 0 46px !important; }
+.empty { text-align:center; padding:4rem 2rem; color:#a38774; }
+.empty i { font-size:3rem; margin-bottom:1rem; display:block; }
+.status-badge { display:inline-block; padding:3px 10px; border-radius:40px; font-size:0.75rem; font-weight:700; }
+.status-badge.pending { background:#f7e3d4; color:#a55f3a; }
+.status-badge.confirmed { background:#d0e6d9; color:#1a6b3f; }
+.status-badge.rejected { background:#e9e5e0; color:#999; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><i class="fas fa-bell"></i> طلبات الزبائن</h1>
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <span class="badge" id="pendingCount"><i class="fas fa-clock"></i> 0 جديد</span>
+    <a href="index-v3.html" style="background:white; color:#c52a1a; padding:8px 16px; border-radius:40px; text-decoration:none; font-weight:700; font-size:0.85rem;">
+      <i class="fas fa-cash-register"></i> الكاشير
+    </a>
+  </div>
+</div>
+
+<div class="grid" id="ordersGrid">
+  <div class="empty"><i class="fas fa-spinner fa-spin"></i><div>جاري التحميل...</div></div>
+</div>
+
+<script>
+let allOrders = [];
+
+window.addEventListener('firebase-ready', () => {
+  const { db, ref, onValue } = window.FB;
+  onValue(ref(db, 'customerOrders'), (snap) => {
+    const data = snap.val() || {};
+    allOrders = Object.entries(data).map(([id, o]) => ({ id, ...o }));
+    allOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    render();
+  });
+});
+
+function render() {
+  const grid = document.getElementById('ordersGrid');
+  const pending = allOrders.filter(o => o.status === 'pending').length;
+  document.getElementById('pendingCount').innerHTML = '<i class="fas fa-clock"></i> ' + pending + ' جديد';
+
+  if (allOrders.length === 0) {
+    grid.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><div>لا توجد طلبات حاليًا</div></div>';
+    return;
+  }
+
+  grid.innerHTML = allOrders.slice(0, 60).map(o => {
+    const d = new Date(o.createdAt || Date.now());
+    const time = d.toLocaleTimeString('ar-SA', { hour:'2-digit', minute:'2-digit' });
+    const items = (o.items || []).map(it =>
+      '<div class="order-item-row">' +
+        '<span>'+it.name+(it.options ? ' <span class="order-options-line">('+it.options+')</span>' : '')+'</span>' +
+        '<span>×'+it.qty+' · '+(it.price*it.qty).toFixed(2)+'</span>' +
+      '</div>'
+    ).join('');
+    const stCls = o.status === 'pending' ? 'pending' : o.status === 'confirmed' ? 'confirmed' : 'rejected';
+    const stLabel = o.status === 'pending' ? 'جديد' : o.status === 'confirmed' ? 'مؤكد' : 'مرفوض';
+    const actions = o.status === 'pending' ?
+      '<button class="btn-confirm" onclick="confirmOrder(\''+o.id+'\')"><i class="fas fa-check"></i> تأكيد</button>' +
+      '<button class="btn-reject" onclick="rejectOrder(\''+o.id+'\')"><i class="fas fa-times"></i> رفض</button>' +
+      '<button class="btn-delete" onclick="deleteOrder(\''+o.id+'\')"><i class="fas fa-trash"></i></button>'
+      : '<button class="btn-delete" style="flex:1" onclick="deleteOrder(\''+o.id+'\')"><i class="fas fa-trash"></i> حذف</button>';
+
+    return '<div class="order-card '+stCls+'">' +
+      '<div class="order-head">' +
+        '<div class="order-table"><i class="fas fa-chair"></i> طاولة '+o.tableNumber+'</div>' +
+        '<div style="text-align:left">' +
+          '<div class="order-time">'+time+'</div>' +
+          '<span class="status-badge '+stCls+'">'+stLabel+'</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="order-cust">' +
+        '<div><i class="fas fa-user"></i> '+o.customerName+'</div>' +
+        '<div><i class="fas fa-phone"></i> '+o.customerPhone+'</div>' +
+        (o.notes ? '<div><i class="fas fa-sticky-note"></i> '+o.notes+'</div>' : '') +
+      '</div>' +
+      '<div class="order-items">'+items+'</div>' +
+      '<div class="order-total"><span>الإجمالي</span><span>'+(o.total||0).toFixed(2)+' ر.س</span></div>' +
+      '<div class="actions">'+actions+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+window.confirmOrder = async (id) => {
+  const { db, ref, update } = window.FB;
+  await update(ref(db, 'customerOrders/'+id), { status: 'confirmed', confirmedAt: Date.now() });
+};
+window.rejectOrder = async (id) => {
+  if (!confirm('رفض الطلب؟')) return;
+  const { db, ref, update } = window.FB;
+  await update(ref(db, 'customerOrders/'+id), { status: 'rejected', rejectedAt: Date.now() });
+};
+window.deleteOrder = async (id) => {
+  if (!confirm('حذف الطلب نهائيًا؟')) return;
+  const { db, ref, remove } = window.FB;
+  await remove(ref(db, 'customerOrders/'+id));
+};
+</script>
+</body>
+</html>
